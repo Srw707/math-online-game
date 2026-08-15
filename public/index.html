@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ملعب الأرقام — أونلاين</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FAF6EA; --paper-line:#E4DCC6;
+  --board:#1F3A34; --board-dark:#162B26;
+  --ink:#22302C; --ink-soft:#5B6B62;
+  --chalk:#F2C94C;
+  --add:#4A90D9; --sub:#E8975C; --mul:#9B6FD9; --div:#D9678F; --root:#3FBFA1; --pow:#E85C4A;
+  --correct:#3E9C6F; --wrong:#D9524A;
+  --card-shadow: 0 18px 40px -18px rgba(22,43,38,.35);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    linear-gradient(var(--paper-line) 1px, transparent 1px),
+    radial-gradient(circle at 12% 8%, rgba(242,201,76,.10), transparent 40%),
+    radial-gradient(circle at 90% 85%, rgba(74,144,217,.10), transparent 40%),
+    var(--paper);
+  background-size:100% 34px, auto, auto;
+  color:var(--ink); font-family:'Tajawal',sans-serif; min-height:100vh;
+}
+.wrap{ max-width:960px; margin:0 auto; padding:22px 18px 50px; }
+.hidden{ display:none !important; }
+
+.board{
+  background:linear-gradient(180deg,var(--board),var(--board-dark));
+  border-radius:22px; padding:22px 26px; margin-bottom:20px;
+  box-shadow: var(--card-shadow); position:relative; overflow:hidden;
+}
+.board h1{ font-family:'Baloo Bhaijaan 2',sans-serif; color:var(--chalk); font-size:clamp(24px,5vw,34px); margin:0 0 4px; }
+.board p{ color:#CFE3DB; margin:0; font-size:14px; opacity:.85; }
+
+.notebook{
+  background:#fff; border-radius:18px; box-shadow:var(--card-shadow);
+  position:relative; padding:26px 28px 28px 44px; margin-bottom:20px; border:1px solid #EFE7D2;
+}
+.notebook::before{
+  content:""; position:absolute; right:-2px; top:14px; bottom:14px; width:22px;
+  background-image: radial-gradient(circle, #fff 3px, #d8cfb4 3.5px, transparent 4px);
+  background-size: 22px 24px; background-repeat: repeat-y; opacity:.9;
+}
+.section-title{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:18px; margin:0 0 10px; display:flex; align-items:center; gap:8px;}
+
+/* ---- form bits ---- */
+label{ display:block; font-size:13px; font-weight:700; color:var(--ink-soft); margin-bottom:6px;}
+input[type=text]{
+  width:100%; border:2px solid #ECE5D2; border-radius:12px; padding:12px 14px;
+  font-family:'Tajawal',sans-serif; font-size:15px; outline:none; transition:border-color .15s;
+}
+input[type=text]:focus{ border-color:var(--mul); }
+.field{ margin-bottom:16px; }
+.two-col{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+@media (max-width:700px){ .two-col{ grid-template-columns:1fr; } }
+.panel{ border:2px solid #ECE5D2; border-radius:16px; padding:18px; }
+.panel h3{ font-family:'Baloo Bhaijaan 2',sans-serif; margin:0 0 12px; font-size:16px;}
+
+.op-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:8px; margin-bottom:14px;}
+.op-chip{
+  --c: var(--add); cursor:pointer; border:2px solid #ECE5D2; background:#fffdf7; border-radius:12px;
+  padding:10px 6px; text-align:center; transition:.15s; user-select:none; font-size:13px; font-weight:700;
+}
+.op-chip .glyph{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:19px; color:var(--c); display:block; margin-bottom:3px;}
+.op-chip.selected{ border-color:var(--c); background:color-mix(in srgb, var(--c) 12%, white); box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 20%, transparent);}
+
+.toggle-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+.toggle-btn{ cursor:pointer; border:2px solid #ECE5D2; background:#fffdf7; border-radius:10px; padding:8px 14px; font-size:13px; font-weight:700; transition:.15s;}
+.toggle-btn.selected{ border-color:var(--mul); background:color-mix(in srgb, var(--mul) 12%, white); color:var(--mul);}
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  background:var(--board); color:var(--chalk); border:none; border-radius:14px; padding:14px 20px;
+  font-family:'Baloo Bhaijaan 2',sans-serif; font-size:16px; cursor:pointer; transition:.15s; width:100%;
+}
+.btn:disabled{ opacity:.4; cursor:not-allowed; }
+.btn:not(:disabled):hover{ transform:translateY(-2px); }
+.btn.secondary{ background:#fff; color:var(--board); border:2px solid var(--board); }
+.error-msg{ color:var(--wrong); font-size:13px; font-weight:700; min-height:18px; margin-top:8px; text-align:center;}
+
+/* ---- lobby ---- */
+.room-code-box{
+  display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:22px;
+  background:var(--board); border-radius:14px; padding:16px; color:var(--chalk);
+}
+.room-code-box .code{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:32px; letter-spacing:6px; direction:ltr;}
+.copy-btn{ background:rgba(255,255,255,.12); border:none; color:var(--chalk); border-radius:8px; padding:8px 12px; cursor:pointer; font-size:13px;}
+.player-list{ display:grid; gap:10px; margin-bottom:20px;}
+.player-row{
+  display:flex; align-items:center; justify-content:space-between; background:#fffdf7; border:2px solid #ECE5D2;
+  border-radius:12px; padding:10px 16px; font-weight:700;
+}
+.player-row .name{ display:flex; align-items:center; gap:8px;}
+.host-badge{ background:var(--chalk); color:var(--board); font-size:11px; padding:2px 8px; border-radius:20px;}
+.waiting-msg{ text-align:center; color:var(--ink-soft); font-size:14px; }
+
+/* ---- game screen ---- */
+.game-layout{ display:grid; grid-template-columns:1fr 220px; gap:18px; }
+@media (max-width:700px){ .game-layout{ grid-template-columns:1fr; } }
+.timer-track{ background:#ECE5D2; border-radius:20px; height:10px; overflow:hidden; margin-bottom:16px;}
+.timer-fill{ height:100%; background:linear-gradient(90deg,var(--chalk),var(--mul)); border-radius:20px; transition:width .1s linear; width:100%;}
+.q-meta{ display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px;}
+.q-card{ text-align:center; padding:10px 6px 6px; min-height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+.op-tag{ font-size:12px; font-weight:700; padding:4px 12px; border-radius:20px; color:#fff; margin-bottom:12px;}
+.q-expr{ direction:ltr; unicode-bidi:isolate; font-family:'Baloo Bhaijaan 2',sans-serif; font-size:clamp(34px,7vw,50px); margin-bottom:18px;}
+.q-expr sup{ font-size:.55em; }
+.answer-zone{ width:100%; max-width:380px; margin:0 auto;}
+.type-row{ display:flex; gap:8px; }
+.type-row input{ flex:1; font-family:'Baloo Bhaijaan 2',sans-serif; font-size:22px; text-align:center; direction:ltr; }
+.type-row button{ background:var(--board); color:var(--chalk); border:none; border-radius:12px; padding:0 18px; font-family:'Baloo Bhaijaan 2',sans-serif; font-size:15px; cursor:pointer;}
+.choice-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.choice-btn{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:20px; border:2px solid #ECE5D2; background:#fffdf7; border-radius:12px; padding:12px; cursor:pointer; direction:ltr; transition:.15s;}
+.choice-btn:hover{ border-color:var(--mul); transform:translateY(-2px);}
+.choice-btn.correct{ background:color-mix(in srgb, var(--correct) 18%, white); border-color:var(--correct);}
+.choice-btn.wrong{ background:color-mix(in srgb, var(--wrong) 15%, white); border-color:var(--wrong);}
+.choice-btn:disabled{ cursor:default; }
+.feedback{ margin-top:14px; font-size:14px; font-weight:700; min-height:20px;}
+.feedback.ok{ color:var(--correct);} .feedback.bad{ color:var(--wrong);} .feedback.wait{ color:var(--ink-soft);}
+
+.scoreboard{ background:#fffdf7; border:2px solid #ECE5D2; border-radius:14px; padding:14px; height:fit-content;}
+.scoreboard h4{ font-family:'Baloo Bhaijaan 2',sans-serif; margin:0 0 10px; font-size:14px;}
+.sb-row{ display:flex; align-items:center; justify-content:space-between; padding:7px 0; font-size:13px; border-bottom:1px solid #F0EAD9;}
+.sb-row:last-child{ border-bottom:none; }
+.sb-rank{ font-weight:800; color:var(--ink-soft); width:18px;}
+.sb-name{ flex:1; display:flex; align-items:center; gap:5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.sb-score{ font-family:'Baloo Bhaijaan 2',sans-serif; color:var(--board); }
+.answered-dot{ width:8px; height:8px; border-radius:50%; background:var(--correct); flex-shrink:0;}
+.end-game-link{ background:none; border:none; color:var(--ink-soft); font-size:12.5px; text-decoration:underline; cursor:pointer; margin-top:14px; display:block; width:100%; text-align:center;}
+
+/* ---- results ---- */
+.podium{ display:flex; align-items:flex-end; justify-content:center; gap:12px; margin-bottom:26px;}
+.podium .slot{ text-align:center; }
+.podium .bar{ width:78px; border-radius:10px 10px 0 0; display:flex; align-items:flex-start; justify-content:center; padding-top:8px; font-family:'Baloo Bhaijaan 2',sans-serif; color:#fff; font-size:20px;}
+.podium .slot.s1 .bar{ height:110px; background:linear-gradient(180deg,#F2C94C,#E0AC1F);}
+.podium .slot.s2 .bar{ height:82px; background:linear-gradient(180deg,#B9C4C0,#8FA09A);}
+.podium .slot.s3 .bar{ height:60px; background:linear-gradient(180deg,#E0A97A,#C9855A);}
+.podium .pname{ font-weight:800; font-size:13px; margin-top:6px; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.full-board{ display:grid; gap:8px; margin-bottom:22px;}
+.result-btns{ display:flex; gap:10px; }
+footer{ text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16px; opacity:.7;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="board">
+    <h1>🧮 ملعب الأرقام — أونلاين</h1>
+    <p id="boardSub">تحدَّ أصدقاءك في مسابقة رياضيات حية</p>
+  </div>
+
+  <!-- ============ HOME ============ -->
+  <div id="screen-home" class="notebook">
+    <div class="section-title">👤 اسمك</div>
+    <div class="field"><input type="text" id="nameInput" placeholder="اكتب اسمك هنا" maxlength="20"></div>
+
+    <div class="two-col">
+      <div class="panel">
+        <h3>🎮 إنشاء غرفة جديدة</h3>
+        <div class="section-title" style="font-size:14px;margin-bottom:8px;">أنواع المسائل</div>
+        <div class="op-grid" id="opGrid"></div>
+        <div class="section-title" style="font-size:14px;margin-bottom:8px;">الصعوبة</div>
+        <div class="toggle-row" id="diffRow">
+          <div class="toggle-btn" data-d="easy">🌱 سهل</div>
+          <div class="toggle-btn" data-d="medium">⚡ متوسط</div>
+          <div class="toggle-btn" data-d="hard">🔥 صعب</div>
+        </div>
+        <div class="section-title" style="font-size:14px;margin-bottom:8px;">طريقة الإجابة</div>
+        <div class="toggle-row" id="modeRow">
+          <div class="toggle-btn" data-m="choice">🔘 اختيارات</div>
+          <div class="toggle-btn" data-m="type">✍️ كتابة</div>
+        </div>
+        <div class="section-title" style="font-size:14px;margin-bottom:8px;">عدد الأسئلة</div>
+        <div class="toggle-row" id="countRow">
+          <div class="toggle-btn" data-c="10">10</div>
+          <div class="toggle-btn" data-c="15">15</div>
+          <div class="toggle-btn" data-c="20">20</div>
+        </div>
+        <button class="btn" id="createBtn" disabled>إنشاء الغرفة 🚀</button>
+      </div>
+
+      <div class="panel">
+        <h3>🔑 الانضمام إلى غرفة</h3>
+        <div class="field">
+          <label>رمز الغرفة</label>
+          <input type="text" id="joinCodeInput" placeholder="مثال: AB12C" maxlength="5" style="text-transform:uppercase; direction:ltr; text-align:center; letter-spacing:4px; font-family:'Baloo Bhaijaan 2',sans-serif;">
+        </div>
+        <button class="btn secondary" id="joinBtn">انضمام للغرفة 🔗</button>
+      </div>
+    </div>
+    <div class="error-msg" id="homeError"></div>
+  </div>
+
+  <!-- ============ LOBBY ============ -->
+  <div id="screen-lobby" class="notebook hidden">
+    <div class="room-code-box">
+      <span>رمز الغرفة</span>
+      <span class="code" id="lobbyCode">-----</span>
+      <button class="copy-btn" id="copyCodeBtn">نسخ 📋</button>
+    </div>
+    <div class="section-title">👥 اللاعبون (<span id="playerCount">0</span>)</div>
+    <div class="player-list" id="playerList"></div>
+    <button class="btn" id="startGameBtn">ابدأ اللعبة 🚀</button>
+    <p class="waiting-msg" id="lobbyWaitMsg">بانتظار قيام منشئ الغرفة ببدء اللعبة...</p>
+    <button class="end-game-link" id="leaveLobbyBtn">مغادرة الغرفة</button>
+  </div>
+
+  <!-- ============ GAME ============ -->
+  <div id="screen-game" class="notebook hidden">
+    <div class="game-layout">
+      <div>
+        <div class="q-meta">
+          <span id="qCounter">سؤال 1 / 10</span>
+          <span id="qTimerLabel">⏱ 15</span>
+        </div>
+        <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
+        <div class="q-card">
+          <div class="op-tag" id="gOpTag">جمع</div>
+          <div class="q-expr" id="gExpr">؟</div>
+          <div class="answer-zone">
+            <div class="type-row hidden" id="gTypeRow">
+              <input type="text" inputmode="numeric" id="gTypeInput" placeholder="اكتب الإجابة">
+              <button id="gSubmitBtn">تأكيد</button>
+            </div>
+            <div class="choice-grid hidden" id="gChoiceGrid"></div>
+          </div>
+          <div class="feedback" id="gFeedback"></div>
+        </div>
+      </div>
+      <div class="scoreboard">
+        <h4>🏆 الترتيب الحي</h4>
+        <div id="sbList"></div>
+        <button class="end-game-link hidden" id="endGameBtn">إنهاء اللعبة الآن (المضيف)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ RESULTS ============ -->
+  <div id="screen-results" class="notebook hidden">
+    <div class="section-title" style="justify-content:center;">🏁 النتائج النهائية</div>
+    <div class="podium" id="podium"></div>
+    <div class="full-board" id="fullBoard"></div>
+    <div class="result-btns">
+      <button class="btn" id="playAgainBtn">العب مرة أخرى 🔁</button>
+      <button class="btn secondary" id="backHomeBtn">مغادرة الغرفة</button>
+    </div>
+  </div>
+
+  <footer>العب مع أصدقائك في نفس الوقت 🎈</footer>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+const OPS = [
+  {key:'add', label:'جمع', glyph:'+', color:'var(--add)'},
+  {key:'sub', label:'طرح', glyph:'−', color:'var(--sub)'},
+  {key:'mul', label:'ضرب', glyph:'×', color:'var(--mul)'},
+  {key:'div', label:'قسمة', glyph:'÷', color:'var(--div)'},
+  {key:'root', label:'الجذر التربيعي', glyph:'√', color:'var(--root)'},
+  {key:'pow', label:'الأس', glyph:'x²', color:'var(--pow)'},
+];
+const OP_COLOR = Object.fromEntries(OPS.map(o=>[o.key,o.color]));
+
+const local = { ops:new Set(), difficulty:null, mode:null, count:null, roomCode:null, isHost:false, myId:null, currentAnswered:false };
+
+/* ---------- screens ---------- */
+const screens = ['home','lobby','game','results'];
+function showScreen(name){
+  screens.forEach(s=> document.getElementById('screen-'+s).classList.toggle('hidden', s!==name));
+}
+
+/* ---------- home setup UI ---------- */
+const opGrid = document.getElementById('opGrid');
+OPS.forEach(o=>{
+  const el = document.createElement('div');
+  el.className='op-chip';
+  el.style.setProperty('--c', o.color);
+  el.innerHTML = `<span class="glyph">${o.glyph}</span>${o.label}`;
+  el.addEventListener('click', ()=>{
+    if(local.ops.has(o.key)){ local.ops.delete(o.key); el.classList.remove('selected'); }
+    else { local.ops.add(o.key); el.classList.add('selected'); }
+    validateCreate();
+  });
+  opGrid.appendChild(el);
+});
+document.querySelectorAll('#diffRow .toggle-btn').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    document.querySelectorAll('#diffRow .toggle-btn').forEach(c=>c.classList.remove('selected'));
+    el.classList.add('selected'); local.difficulty = el.dataset.d; validateCreate();
+  });
+});
+document.querySelectorAll('#modeRow .toggle-btn').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    document.querySelectorAll('#modeRow .toggle-btn').forEach(c=>c.classList.remove('selected'));
+    el.classList.add('selected'); local.mode = el.dataset.m; validateCreate();
+  });
+});
+document.querySelectorAll('#countRow .toggle-btn').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    document.querySelectorAll('#countRow .toggle-btn').forEach(c=>c.classList.remove('selected'));
+    el.classList.add('selected'); local.count = parseInt(el.dataset.c,10); validateCreate();
+  });
+});
+const createBtn = document.getElementById('createBtn');
+const nameInput = document.getElementById('nameInput');
+function validateCreate(){
+  createBtn.disabled = !(local.ops.size>0 && local.difficulty && local.mode && local.count);
+}
+
+const homeError = document.getElementById('homeError');
+function showHomeError(msg){ homeError.textContent = msg; setTimeout(()=>{ if(homeError.textContent===msg) homeError.textContent=''; }, 4000); }
+
+createBtn.addEventListener('click', ()=>{
+  const name = nameInput.value.trim();
+  if(!name){ showHomeError('اكتب اسمك أولاً'); nameInput.focus(); return; }
+  socket.emit('create_room', {
+    playerName: name,
+    settings: { ops:[...local.ops], difficulty:local.difficulty, mode:local.mode, questionCount: local.count }
+  });
+});
+
+document.getElementById('joinBtn').addEventListener('click', ()=>{
+  const name = nameInput.value.trim();
+  const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+  if(!name){ showHomeError('اكتب اسمك أولاً'); nameInput.focus(); return; }
+  if(!code){ showHomeError('اكتب رمز الغرفة'); return; }
+  socket.emit('join_room', { playerName:name, roomCode:code });
+});
+
+socket.on('room_error', ({message})=> showHomeError(message));
+
+/* ---------- lobby ---------- */
+socket.on('room_created', (room)=>{ enterLobby(room); });
+socket.on('room_joined', (room)=>{ enterLobby(room); });
+
+function enterLobby(room){
+  local.roomCode = room.code;
+  local.myId = socket.id;
+  showScreen('lobby');
+  renderLobby(room);
+}
+
+function renderLobby(room){
+  if(local.roomCode !== room.code) return;
+  document.getElementById('lobbyCode').textContent = room.code;
+  document.getElementById('playerCount').textContent = room.players.length;
+  local.isHost = room.hostId===socket.id;
+
+  const list = document.getElementById('playerList');
+  list.innerHTML='';
+  room.players.forEach(p=>{
+    const row = document.createElement('div');
+    row.className='player-row';
+    row.innerHTML = `<span class="name">${p.connected?'🟢':'⚪'} ${p.name}${p.isHost?'<span class=\"host-badge\">المضيف</span>':''}</span>`;
+    list.appendChild(row);
+  });
+
+  const startBtn = document.getElementById('startGameBtn');
+  const waitMsg = document.getElementById('lobbyWaitMsg');
+  if(room.state==='lobby'){
+    startBtn.classList.toggle('hidden', !local.isHost);
+    waitMsg.classList.toggle('hidden', local.isHost);
+  }
+}
+
+socket.on('room_update', (room)=>{
+  if(room.state==='lobby'){
+    renderLobby(room);
+  } else if(room.state==='playing'){
+    local.isHost = room.hostId===socket.id;
+    renderScoreboard(room.players);
+  } else if(room.state==='finished'){
+    local.isHost = room.hostId===socket.id;
+  }
+});
+
+document.getElementById('startGameBtn').addEventListener('click', ()=>{
+  socket.emit('start_game', { roomCode: local.roomCode });
+});
+document.getElementById('leaveLobbyBtn').addEventListener('click', leaveRoom);
+document.getElementById('copyCodeBtn').addEventListener('click', ()=>{
+  navigator.clipboard?.writeText(local.roomCode || '');
+  const btn = document.getElementById('copyCodeBtn');
+  const old = btn.textContent; btn.textContent='تم! ✅';
+  setTimeout(()=> btn.textContent = old, 1200);
+});
+
+function leaveRoom(){
+  socket.emit('leave_room');
+  local.roomCode=null;
+  showScreen('home');
+}
+
+/* ---------- game ---------- */
+let timerInterval = null;
+
+socket.on('game_started', ()=>{
+  showScreen('game');
+  document.getElementById('endGameBtn').classList.toggle('hidden', !local.isHost);
+});
+
+const gExpr = document.getElementById('gExpr');
+const gOpTag = document.getElementById('gOpTag');
+const gTypeRow = document.getElementById('gTypeRow');
+const gChoiceGrid = document.getElementById('gChoiceGrid');
+const gTypeInput = document.getElementById('gTypeInput');
+const gFeedback = document.getElementById('gFeedback');
+const timerFill = document.getElementById('timerFill');
+const qTimerLabel = document.getElementById('qTimerLabel');
+
+socket.on('new_question', (q)=>{
+  local.currentAnswered = false;
+  document.getElementById('qCounter').textContent = `سؤال ${q.questionNumber} / ${q.totalQuestions}`;
+  gOpTag.textContent = q.opLabel;
+  gOpTag.style.background = OP_COLOR[q.opKey] || 'var(--mul)';
+  gExpr.innerHTML = formatExpr(q.exprHTML) + ' = ؟';
+  gFeedback.textContent=''; gFeedback.className='feedback';
+
+  if(q.mode==='type'){
+    gTypeRow.classList.remove('hidden'); gChoiceGrid.classList.add('hidden');
+    gTypeInput.value=''; gTypeInput.disabled=false;
+    setTimeout(()=>gTypeInput.focus(), 50);
+  } else {
+    gChoiceGrid.classList.remove('hidden'); gTypeRow.classList.add('hidden');
+    gChoiceGrid.innerHTML='';
+    q.choices.forEach(c=>{
+      const btn = document.createElement('button');
+      btn.className='choice-btn';
+      btn.textContent = c;
+      btn.addEventListener('click', ()=> submitAnswer(c, btn));
+      gChoiceGrid.appendChild(btn);
+    });
+  }
+
+  clearInterval(timerInterval);
+  const timeLimitMs = q.timeLimit*1000;
+  function tick(){
+    const elapsed = Date.now() - q.startTime;
+    const remaining = Math.max(0, timeLimitMs - elapsed);
+    timerFill.style.width = (remaining/timeLimitMs*100)+'%';
+    qTimerLabel.textContent = '⏱ ' + Math.ceil(remaining/1000);
+    if(remaining<=0) clearInterval(timerInterval);
+  }
+  tick();
+  timerInterval = setInterval(tick, 100);
+});
+
+function formatExpr(expr){
+  return expr.replace(/(\d+)\^(\d+)/, '$1<sup>$2</sup>');
+}
+
+function submitAnswer(value, btnEl){
+  if(local.currentAnswered) return;
+  local.currentAnswered = true;
+  socket.emit('submit_answer', { roomCode: local.roomCode, answer: value });
+  if(btnEl){
+    [...gChoiceGrid.children].forEach(b=> b.disabled=true);
+  } else {
+    gTypeInput.disabled = true;
+  }
+  gFeedback.textContent = 'بانتظار باقي اللاعبين...';
+  gFeedback.className = 'feedback wait';
+}
+
+document.getElementById('gSubmitBtn').addEventListener('click', ()=>{
+  const v = gTypeInput.value.trim();
+  if(v==='' || local.currentAnswered) return;
+  submitAnswer(v, null);
+});
+gTypeInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('gSubmitBtn').click(); });
+
+socket.on('answer_result', ({correct, pointsEarned})=>{
+  if(correct){
+    gFeedback.textContent = `✅ صحيح! +${pointsEarned} نقطة`;
+    gFeedback.className = 'feedback ok';
+  } else {
+    gFeedback.textContent = `❌ إجابة خاطئة`;
+    gFeedback.className = 'feedback bad';
+  }
+});
+
+socket.on('question_ended', ({correctAnswer, leaderboard})=>{
+  clearInterval(timerInterval);
+  timerFill.style.width='0%';
+  if(!gChoiceGrid.classList.contains('hidden')){
+    [...gChoiceGrid.children].forEach(b=>{
+      b.disabled = true;
+      if(Number(b.textContent)===correctAnswer) b.classList.add('correct');
+    });
+  } else if(!local.currentAnswered){
+    gFeedback.textContent = `انتهى الوقت! الإجابة الصحيحة: ${correctAnswer}`;
+    gFeedback.className = 'feedback bad';
+  }
+  gTypeInput.disabled = true;
+  renderScoreboard(leaderboard);
+});
+
+function renderScoreboard(players){
+  const sbList = document.getElementById('sbList');
+  sbList.innerHTML='';
+  players.forEach((p,i)=>{
+    const row = document.createElement('div');
+    row.className='sb-row';
+    row.innerHTML = `<span class="sb-rank">${i+1}</span>
+      <span class="sb-name">${p.answeredThisRound?'<span class=\"answered-dot\"></span>':''}${p.name}${p.streak>=3?' 🔥'+p.streak:''}</span>
+      <span class="sb-score">${p.score}</span>`;
+    sbList.appendChild(row);
+  });
+}
+
+document.getElementById('endGameBtn').addEventListener('click', ()=>{
+  socket.emit('end_game', { roomCode: local.roomCode });
+});
+
+/* ---------- results ---------- */
+socket.on('game_over', ({leaderboard})=>{
+  clearInterval(timerInterval);
+  showScreen('results');
+  renderResults(leaderboard);
+});
+
+function renderResults(players){
+  const podium = document.getElementById('podium');
+  podium.innerHTML='';
+  const order = [1,0,2]; // silver, gold, bronze visual order
+  order.forEach(idx=>{
+    const p = players[idx];
+    if(!p) return;
+    const rankClass = idx===0?'s1':idx===1?'s2':'s3';
+    const medal = idx===0?'🥇':idx===1?'🥈':'🥉';
+    const slot = document.createElement('div');
+    slot.className='slot '+rankClass;
+    slot.innerHTML = `<div class="pname">${p.name}</div><div class="bar">${medal}</div><div style="font-family:'Baloo Bhaijaan 2',sans-serif;margin-top:4px;">${p.score}</div>`;
+    podium.appendChild(slot);
+  });
+
+  const full = document.getElementById('fullBoard');
+  full.innerHTML='';
+  players.forEach((p,i)=>{
+    const row = document.createElement('div');
+    row.className='player-row';
+    row.innerHTML = `<span class="name">${i+1}. ${p.name}${p.isHost?'<span class=\"host-badge\">المضيف</span>':''}</span><span style="font-family:'Baloo Bhaijaan 2',sans-serif;">${p.score} نقطة</span>`;
+    full.appendChild(row);
+  });
+
+  document.getElementById('playAgainBtn').classList.toggle('hidden', !local.isHost);
+}
+
+document.getElementById('playAgainBtn').addEventListener('click', ()=>{
+  socket.emit('start_game', { roomCode: local.roomCode });
+});
+document.getElementById('backHomeBtn').addEventListener('click', leaveRoom);
+</script>
+</body>
+</html>
