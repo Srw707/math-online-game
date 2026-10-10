@@ -4,170 +4,367 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ملعب الأرقام — أونلاين</title>
+<meta name="theme-color" content="#1B2548">
+<script>
+/* تطبيق الثيم المحفوظ قبل أول رسم للصفحة (لتفادي الوميض) */
+(function(){
+  try{
+    var d=document.documentElement, t=localStorage.getItem('np_theme'), f=localStorage.getItem('np_fx');
+    if(t) d.setAttribute('data-theme', t);
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(f==='off' || (f===null && reduce)) d.setAttribute('data-fx','off');
+  }catch(e){}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 <style>
-:root{
-  --paper:#FAF6EA; --paper-line:#E4DCC6;
-  --board:#1F3A34; --board-dark:#162B26;
-  --ink:#22302C; --ink-soft:#5B6B62;
-  --chalk:#F2C94C;
-  --add:#4A90D9; --sub:#E8975C; --mul:#9B6FD9; --div:#D9678F; --root:#3FBFA1; --pow:#E85C4A;
-  --correct:#3E9C6F; --wrong:#D9524A;
-  --card-shadow: 0 18px 40px -18px rgba(22,43,38,.35);
+/* ============================================================
+   الثيمات — كلها داكنة لراحة العين (تتغير عبر data-theme على <html>)
+============================================================ */
+:root{ --add:#4A90D9; --sub:#E8975C; --mul:#9B6FD9; --div:#D9678F; --root:#3FBFA1; --pow:#E85C4A; }
+html{ color-scheme:dark; }
+
+/* 🌙 ليلي (الافتراضي) */
+:root, html[data-theme="night"]{
+  --paper:#0C1222; --paper-line:transparent;
+  --page-bg: radial-gradient(circle at 15% 10%, rgba(124,156,255,.18), transparent 45%), radial-gradient(circle at 85% 90%, rgba(143,227,255,.10), transparent 45%), var(--paper);
+  --page-size: auto;
+  --board-from:#1B2548; --board-to:#111A36; --title:#A9BBFF; --on-board:#B8C4EE;
+  --ink:#E7ECFB; --ink-soft:#9AA7CB;
+  --card:#151D36; --card-2:#1A2442; --line:#27325A; --line-2:#2B3764; --chip:#222D52; --spiral:#35427A;
+  --accent:#7C9CFF; --btn-bg:#7C9CFF; --btn-fg:#0C1222; --fx:#8FA8FF;
+  --correct:#4FD18B; --wrong:#FF7B72;
+  --warn-bg:#3A3217; --warn-line:#5A4D1F; --warn-ink:#F2DE9B; --danger-soft:#3A1F26; --danger-line:#6A2E38;
+  --shadow:0 18px 40px -18px rgba(0,0,0,.65);
 }
+/* 📓 السبورة (سبورة داكنة بخطوط الدفتر الخافتة) */
+html[data-theme="notebook"]{
+  --paper:#0E1A16; --paper-line:rgba(255,255,255,.035);
+  --page-bg: linear-gradient(var(--paper-line) 1px, transparent 1px), radial-gradient(circle at 12% 8%, rgba(242,201,76,.10), transparent 40%), radial-gradient(circle at 90% 85%, rgba(74,144,217,.08), transparent 40%), var(--paper);
+  --page-size: 100% 34px, auto, auto;
+  --board-from:#22403A; --board-to:#162B26; --title:#F2C94C; --on-board:#BFD6CC;
+  --ink:#E9F1ED; --ink-soft:#94AAA2;
+  --card:#14231F; --card-2:#1A2D27; --line:#27403A; --line-2:#2C4740; --chip:#213832; --spiral:#3A5A52;
+  --accent:#F2C94C; --btn-bg:#F2C94C; --btn-fg:#162B26; --fx:#F2C94C;
+  --correct:#4FD18B; --wrong:#FF7B72;
+  --warn-bg:#3A3217; --warn-line:#5A4D1F; --warn-ink:#F2DE9B; --danger-soft:#3A1F26; --danger-line:#6A2E38;
+  --shadow:0 18px 40px -18px rgba(0,0,0,.65);
+}
+/* 🌊 المحيط */
+html[data-theme="ocean"]{
+  --paper:#07161C; --paper-line:transparent;
+  --page-bg: radial-gradient(circle at 10% 0%, rgba(60,195,230,.20), transparent 45%), radial-gradient(circle at 95% 100%, rgba(14,106,138,.22), transparent 50%), var(--paper);
+  --page-size: auto;
+  --board-from:#0E4A63; --board-to:#0A2F44; --title:#8EE6FF; --on-board:#BFE6F2;
+  --ink:#E3F4F9; --ink-soft:#8FB3C2;
+  --card:#0F2530; --card-2:#133040; --line:#1E4152; --line-2:#244B5E; --chip:#173848; --spiral:#2E5A70;
+  --accent:#3CC3E6; --btn-bg:#3CC3E6; --btn-fg:#07161C; --fx:#3CC3E6;
+  --correct:#4FD18B; --wrong:#FF7B72;
+  --warn-bg:#3A3217; --warn-line:#5A4D1F; --warn-ink:#F2DE9B; --danger-soft:#3A1F26; --danger-line:#6A2E38;
+  --shadow:0 18px 40px -18px rgba(0,0,0,.65);
+}
+/* 🌅 الغروب */
+html[data-theme="sunset"]{
+  --paper:#1C1018; --paper-line:transparent;
+  --page-bg: radial-gradient(circle at 10% 0%, rgba(255,138,101,.20), transparent 45%), radial-gradient(circle at 95% 100%, rgba(217,70,122,.18), transparent 50%), var(--paper);
+  --page-size: auto;
+  --board-from:#A23A5C; --board-to:#5A2342; --title:#FFD28A; --on-board:#F5CFD9;
+  --ink:#FBE9EE; --ink-soft:#BE96A4;
+  --card:#2A1822; --card-2:#32202B; --line:#4A2F3D; --line-2:#553646; --chip:#3D2634; --spiral:#6A4558;
+  --accent:#FF8A65; --btn-bg:#FF8A65; --btn-fg:#1C1018; --fx:#FF8A65;
+  --correct:#4FD18B; --wrong:#FF7B72;
+  --warn-bg:#3A3217; --warn-line:#5A4D1F; --warn-ink:#F2DE9B; --danger-soft:#3A1F26; --danger-line:#6A2E38;
+  --shadow:0 18px 40px -18px rgba(0,0,0,.65);
+}
+/* 🌿 الغابة */
+html[data-theme="forest"]{
+  --paper:#0C1710; --paper-line:transparent;
+  --page-bg: radial-gradient(circle at 8% 5%, rgba(126,211,107,.16), transparent 45%), radial-gradient(circle at 95% 100%, rgba(47,94,55,.25), transparent 50%), var(--paper);
+  --page-size: auto;
+  --board-from:#245A33; --board-to:#143A21; --title:#D9F27A; --on-board:#C6E2C6;
+  --ink:#E6F2E6; --ink-soft:#96B09A;
+  --card:#14231A; --card-2:#1A2D21; --line:#2A4333; --line-2:#30503B; --chip:#213A2A; --spiral:#3E6249;
+  --accent:#7ED36B; --btn-bg:#7ED36B; --btn-fg:#0C1710; --fx:#7ED36B;
+  --correct:#4FD18B; --wrong:#FF7B72;
+  --warn-bg:#3A3217; --warn-line:#5A4D1F; --warn-ink:#F2DE9B; --danger-soft:#3A1F26; --danger-line:#6A2E38;
+  --shadow:0 18px 40px -18px rgba(0,0,0,.65);
+}
+
+/* ============================================================
+   الأساس
+============================================================ */
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
 body{
-  background:
-    linear-gradient(var(--paper-line) 1px, transparent 1px),
-    radial-gradient(circle at 12% 8%, rgba(242,201,76,.10), transparent 40%),
-    radial-gradient(circle at 90% 85%, rgba(74,144,217,.10), transparent 40%),
-    var(--paper);
-  background-size:100% 34px, auto, auto;
+  background: var(--page-bg);
+  background-size: var(--page-size);
+  background-attachment: fixed;
   color:var(--ink); font-family:'Tajawal',sans-serif; min-height:100vh;
 }
-.wrap{ max-width:960px; margin:0 auto; padding:22px 18px 50px; }
+.wrap{ position:relative; z-index:1; max-width:960px; margin:0 auto; padding:22px 18px 50px; }
 .hidden{ display:none !important; }
 
-.board{
-  background:linear-gradient(180deg,var(--board),var(--board-dark));
-  border-radius:22px; padding:22px 26px; margin-bottom:20px;
-  box-shadow: var(--card-shadow); position:relative; overflow:hidden;
+/* رموز رياضية عائمة في الخلفية (هادئة وبطيئة) */
+.bg-fx{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+.bg-fx span{
+  position:absolute; bottom:-70px; color:var(--fx); opacity:0;
+  font-family:'Baloo Bhaijaan 2',sans-serif; font-weight:700;
+  animation: floatUp linear infinite; will-change:transform, opacity;
 }
-.board h1{ font-family:'Baloo Bhaijaan 2',sans-serif; color:var(--chalk); font-size:clamp(24px,5vw,34px); margin:0 0 4px; }
-.board p{ color:#CFE3DB; margin:0; font-size:14px; opacity:.85; }
-.board-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; position:relative; }
-.admin-link{
-  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
-  width:42px; height:42px; border-radius:12px; font-size:20px; text-decoration:none;
-  background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.18); color:var(--chalk);
-  transition:.15s;
+@keyframes floatUp{
+  0%{ transform:translate3d(0,0,0) rotate(0deg); opacity:0; }
+  12%{ opacity:var(--o,.1); }
+  88%{ opacity:var(--o,.1); }
+  100%{ transform:translate3d(var(--dx,30px),-118vh,0) rotate(var(--rot,40deg)); opacity:0; }
 }
-.admin-link:hover{ background:rgba(242,201,76,.22); transform:translateY(-2px); }
 
-.notebook{
-  background:#fff; border-radius:18px; box-shadow:var(--card-shadow);
-  position:relative; padding:26px 28px 28px 44px; margin-bottom:20px; border:1px solid #EFE7D2;
+/* ============================================================
+   الهيدر
+============================================================ */
+.board{
+  background:linear-gradient(135deg,var(--board-from),var(--board-to));
+  border-radius:22px; padding:22px 26px; margin-bottom:20px;
+  box-shadow: var(--shadow); position:relative; overflow:hidden;
 }
+.board::after{ /* لمعة خفيفة تعبر الهيدر ببطء */
+  content:""; position:absolute; top:0; bottom:0; left:-40%; width:30%; pointer-events:none;
+  background:linear-gradient(100deg, transparent, rgba(255,255,255,.09), transparent);
+  transform:skewX(-18deg); animation:sheen 9s ease-in-out infinite;
+}
+@keyframes sheen{ 0%,55%{ left:-40%; } 100%{ left:130%; } }
+.board-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; position:relative; z-index:1; }
+.board h1{ font-family:'Baloo Bhaijaan 2',sans-serif; color:var(--title); font-size:clamp(22px,5vw,32px); margin:0 0 4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.logo-emoji{ display:inline-block; animation:bob 3.6s ease-in-out infinite; transform-origin:50% 80%; }
+@keyframes bob{ 0%,100%{ transform:translateY(0) rotate(-4deg); } 50%{ transform:translateY(-3px) rotate(4deg); } }
+.logo-text{ color:var(--title); }
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .logo-text{
+    background:linear-gradient(100deg, var(--title) 0%, var(--title) 38%, #fff 50%, var(--title) 62%, var(--title) 100%);
+    background-size:250% 100%; background-position:100% 0; -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent; color:transparent;
+    animation:shimmer 7s ease-in-out infinite;
+  }
+}
+@keyframes shimmer{ 0%,45%{ background-position:100% 0; } 100%{ background-position:-100% 0; } }
+.board p{ color:var(--on-board); margin:0; font-size:14px; opacity:.9; }
+
+.head-actions{ display:flex; gap:8px; flex-shrink:0; }
+.head-btn{
+  display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:12px;
+  font-size:19px; text-decoration:none; cursor:pointer; font-family:inherit;
+  background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:var(--title);
+  transition:background-color .2s, transform .2s;
+}
+.head-btn:hover{ background:rgba(255,255,255,.22); transform:translateY(-2px); }
+
+/* لوحة اختيار الثيم */
+.theme-pop{
+  position:absolute; top:94px; left:18px; z-index:30; width:min(310px, calc(100vw - 36px));
+  background:var(--card); border:1px solid var(--line-2); border-radius:18px; padding:14px; box-shadow:var(--shadow);
+  animation:popIn .25s ease backwards;
+}
+.theme-title{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:15px; margin-bottom:10px; }
+.theme-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.swatch{
+  display:flex; flex-direction:column; align-items:flex-start; gap:7px; padding:9px 10px; cursor:pointer;
+  background:var(--card-2); border:2px solid var(--line); border-radius:12px; color:var(--ink);
+  font-family:inherit; font-weight:700; font-size:12.5px; transition:transform .15s, border-color .2s, box-shadow .2s;
+}
+.swatch:hover{ transform:translateY(-2px); }
+.swatch.active{ border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.swatch .dots{ display:flex; gap:4px; }
+.swatch .dots i{ display:block; width:16px; height:16px; border-radius:50%; border:1px solid rgba(0,0,0,.14); }
+.fx-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); font-size:13px; font-weight:700; }
+.switch{
+  position:relative; width:46px; height:26px; border-radius:20px; border:none; cursor:pointer; flex-shrink:0;
+  background:var(--line); transition:background-color .25s;
+}
+.switch::after{ content:""; position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.3); transition:transform .25s; }
+.switch[aria-checked="true"]{ background:var(--accent); }
+.switch[aria-checked="true"]::after{ transform:translateX(-20px); }
+
+/* ============================================================
+   البطاقات والشاشات
+============================================================ */
+.notebook{
+  background:var(--card); border-radius:18px; box-shadow:var(--shadow);
+  position:relative; padding:26px 28px 28px 44px; margin-bottom:20px; border:1px solid var(--line-2);
+  animation:screenIn .5s cubic-bezier(.2,.8,.3,1) backwards;
+  transition:background-color .3s, border-color .3s;
+}
+@keyframes screenIn{ from{ opacity:0; transform:translateY(16px) scale(.985); } to{ opacity:1; transform:none; } }
 .notebook::before{
   content:""; position:absolute; right:-2px; top:14px; bottom:14px; width:22px;
-  background-image: radial-gradient(circle, #fff 3px, #d8cfb4 3.5px, transparent 4px);
+  background-image: radial-gradient(circle, var(--card) 3px, var(--spiral) 3.5px, transparent 4px);
   background-size: 22px 24px; background-repeat: repeat-y; opacity:.9;
 }
 .section-title{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:18px; margin:0 0 10px; display:flex; align-items:center; gap:8px;}
 
+@keyframes riseIn{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
+@keyframes popIn{ from{ opacity:0; transform:scale(.92) translateY(6px); } to{ opacity:1; transform:none; } }
+@keyframes selPop{ 0%{ transform:scale(.95); } 60%{ transform:scale(1.04); } 100%{ transform:scale(1); } }
+@keyframes wobble{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-7px); } 40%{ transform:translateX(6px); } 60%{ transform:translateX(-4px); } 80%{ transform:translateX(3px); } }
+@keyframes okPulse{ 0%{ transform:scale(.9); opacity:.4; } 60%{ transform:scale(1.06); opacity:1; } 100%{ transform:scale(1); } }
+@keyframes exprPop{ 0%{ opacity:0; transform:translateY(10px) scale(.92); } 60%{ transform:translateY(-2px) scale(1.03); } 100%{ opacity:1; transform:none; } }
+@keyframes tagIn{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:none; } }
+@keyframes lowPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.65; } }
+@keyframes bump{ 0%{ transform:scale(1); } 40%{ transform:scale(1.4); color:var(--correct); } 100%{ transform:scale(1); } }
+@keyframes growUp{ from{ transform:scaleY(0); } to{ transform:scaleY(1); } }
+@keyframes slotIn{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+@keyframes glowSlow{ 0%,100%{ box-shadow:0 0 0 0 transparent; } 50%{ box-shadow:0 0 22px 2px color-mix(in srgb, var(--title) 28%, transparent); } }
+@keyframes dotPing{ 0%{ box-shadow:0 0 0 0 color-mix(in srgb, var(--correct) 55%, transparent); } 100%{ box-shadow:0 0 0 7px transparent; } }
+@keyframes toastIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+@keyframes fall{ to{ transform:translate3d(var(--dx,0),108vh,0) rotate(540deg); opacity:.9; } }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
 /* ---- form bits ---- */
 label{ display:block; font-size:13px; font-weight:700; color:var(--ink-soft); margin-bottom:6px;}
 input[type=text]{
-  width:100%; border:2px solid #ECE5D2; border-radius:12px; padding:12px 14px;
-  font-family:'Tajawal',sans-serif; font-size:15px; outline:none; transition:border-color .15s;
+  width:100%; border:2px solid var(--line); border-radius:12px; padding:12px 14px;
+  background:var(--card-2); color:var(--ink);
+  font-family:'Tajawal',sans-serif; font-size:15px; outline:none; transition:border-color .2s, box-shadow .2s, background-color .3s;
 }
-input[type=text]:focus{ border-color:var(--mul); }
+input[type=text]::placeholder{ color:var(--ink-soft); opacity:.7; }
+input[type=text]:focus{ border-color:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
 .field{ margin-bottom:16px; }
 .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.two-col > .panel{ animation:riseIn .5s ease backwards; }
+.two-col > .panel:nth-child(2){ animation-delay:.1s; }
 @media (max-width:700px){ .two-col{ grid-template-columns:1fr; } }
-.panel{ border:2px solid #ECE5D2; border-radius:16px; padding:18px; }
+.panel{ border:2px solid var(--line); border-radius:16px; padding:18px; background:var(--card); transition:background-color .3s, border-color .3s; }
 .panel h3{ font-family:'Baloo Bhaijaan 2',sans-serif; margin:0 0 12px; font-size:16px;}
 
 .op-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:8px; margin-bottom:14px;}
 .op-chip{
-  --c: var(--add); cursor:pointer; border:2px solid #ECE5D2; background:#fffdf7; border-radius:12px;
-  padding:10px 6px; text-align:center; transition:.15s; user-select:none; font-size:13px; font-weight:700;
+  --c: var(--add); cursor:pointer; border:2px solid var(--line); background:var(--card-2); border-radius:12px;
+  padding:10px 6px; text-align:center; user-select:none; font-size:13px; font-weight:700; color:var(--ink);
+  transition:transform .18s, border-color .2s, background-color .25s, box-shadow .2s;
 }
-.op-chip .glyph{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:19px; color:var(--c); display:block; margin-bottom:3px;}
-.op-chip.selected{ border-color:var(--c); background:color-mix(in srgb, var(--c) 12%, white); box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 20%, transparent);}
+.op-chip:hover{ transform:translateY(-3px); }
+.op-chip .glyph{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:19px; color:var(--c); display:block; margin-bottom:3px; transition:transform .25s; }
+.op-chip:hover .glyph{ transform:scale(1.2) rotate(-6deg); }
+.op-chip.selected{ border-color:var(--c); background:color-mix(in srgb, var(--c) 14%, var(--card)); box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 20%, transparent); animation:selPop .3s ease; }
 
 .toggle-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
-.toggle-btn{ cursor:pointer; border:2px solid #ECE5D2; background:#fffdf7; border-radius:10px; padding:8px 14px; font-size:13px; font-weight:700; transition:.15s; user-select:none;}
-.toggle-btn.selected{ border-color:var(--mul); background:color-mix(in srgb, var(--mul) 12%, white); color:var(--mul);}
+.toggle-btn{
+  cursor:pointer; border:2px solid var(--line); background:var(--card-2); color:var(--ink); border-radius:10px;
+  padding:8px 14px; font-size:13px; font-weight:700; user-select:none;
+  transition:transform .18s, border-color .2s, background-color .25s, color .2s;
+}
+.toggle-btn:hover{ transform:translateY(-2px); }
+.toggle-btn.selected{ border-color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, var(--card)); color:var(--accent); animation:selPop .3s ease; }
 
 .btn{
   display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  background:var(--board); color:var(--chalk); border:none; border-radius:14px; padding:14px 20px;
-  font-family:'Baloo Bhaijaan 2',sans-serif; font-size:16px; cursor:pointer; transition:.15s; width:100%;
+  background:var(--btn-bg); color:var(--btn-fg); border:2px solid var(--btn-bg); border-radius:14px; padding:14px 20px;
+  font-family:'Baloo Bhaijaan 2',sans-serif; font-size:16px; cursor:pointer; width:100%;
+  transition:transform .18s, box-shadow .2s, background-color .3s, color .3s, opacity .2s;
 }
 .btn:disabled{ opacity:.4; cursor:not-allowed; }
-.btn:not(:disabled):hover{ transform:translateY(-2px); }
-.btn.secondary{ background:#fff; color:var(--board); border:2px solid var(--board); }
+.btn:not(:disabled):hover{ transform:translateY(-2px); box-shadow:0 10px 20px -10px color-mix(in srgb, var(--btn-bg) 60%, transparent); }
+.btn:not(:disabled):active{ transform:translateY(0) scale(.98); }
+.btn.secondary{ background:var(--card); color:var(--btn-bg); border:2px solid var(--btn-bg); }
 .error-msg{ color:var(--wrong); font-size:13px; font-weight:700; min-height:18px; margin-top:8px; text-align:center;}
 .hint-text{ color:var(--ink-soft); font-size:12.5px; margin:-6px 0 14px; }
 
 /* ---- loading ---- */
 .loading-box{ text-align:center; padding:50px 10px; color:var(--ink-soft); }
-.spinner{ width:32px; height:32px; border:4px solid #ECE5D2; border-top-color:var(--mul); border-radius:50%; margin:0 auto 12px; animation:spin .8s linear infinite; }
-@keyframes spin{ to{ transform:rotate(360deg); } }
+.spinner{ width:34px; height:34px; border:4px solid var(--line); border-top-color:var(--accent); border-radius:50%; margin:0 auto 12px; animation:spin .8s linear infinite; }
 
 /* ---- auth / account ---- */
-.auth-note{ background:#FFF8DF; border:2px solid #F2E3A5; color:#6B5A12; border-radius:12px; padding:10px 14px; font-size:13px; margin:0 0 16px; }
+.auth-note{ background:var(--warn-bg); border:2px solid var(--warn-line); color:var(--warn-ink); border-radius:12px; padding:10px 14px; font-size:13px; margin:0 0 16px; }
 .acc-card{
   display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-  background:#fffdf7; border:2px solid #ECE5D2; border-radius:14px; padding:12px 16px; margin-bottom:18px;
+  background:var(--card-2); border:2px solid var(--line); border-radius:14px; padding:12px 16px; margin-bottom:18px;
+  animation:riseIn .45s ease backwards;
 }
 .acc-name{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:19px; }
-.acc-tag{ direction:ltr; unicode-bidi:isolate; color:var(--mul); }
+.acc-tag{ direction:ltr; unicode-bidi:isolate; color:var(--accent); }
 .acc-stats{ color:var(--ink-soft); font-size:12.5px; margin-top:2px; }
-.link-danger{ background:none; border:2px solid #F1D3CF; color:var(--wrong); border-radius:10px; padding:7px 12px; font-weight:700; font-size:12.5px; cursor:pointer; font-family:inherit; }
-.link-danger:hover{ background:#FDF0EE; }
+.link-danger{ background:none; border:2px solid var(--danger-line); color:var(--wrong); border-radius:10px; padding:7px 12px; font-weight:700; font-size:12.5px; cursor:pointer; font-family:inherit; transition:background-color .2s; }
+.link-danger:hover{ background:var(--danger-soft); }
 .ptag{ direction:ltr; unicode-bidi:isolate; display:inline-block; color:var(--ink-soft); font-size:11px; font-weight:500; margin-inline-start:4px; }
 
 /* ---- lobby ---- */
 .room-code-box{
   display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:16px;
-  background:var(--board); border-radius:14px; padding:16px; color:var(--chalk); flex-wrap:wrap;
+  background:linear-gradient(135deg,var(--board-from),var(--board-to)); border-radius:14px; padding:16px; color:var(--title); flex-wrap:wrap;
+  animation:glowSlow 4.5s ease-in-out infinite;
 }
-.room-code-box .code{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:32px; letter-spacing:6px; direction:ltr;}
-.copy-btn{ background:rgba(255,255,255,.12); border:none; color:var(--chalk); border-radius:8px; padding:8px 12px; cursor:pointer; font-size:13px;}
+.room-code-box .code{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:32px; letter-spacing:6px; direction:ltr; }
+.copy-btn{ background:rgba(255,255,255,.14); border:none; color:var(--title); border-radius:8px; padding:8px 12px; cursor:pointer; font-size:13px; font-family:inherit; transition:background-color .2s; }
+.copy-btn:hover{ background:rgba(255,255,255,.24); }
 .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; justify-content:center; }
-.chip{ background:#F3EEDD; border-radius:20px; padding:4px 12px; font-size:12px; font-weight:700; color:var(--ink-soft); }
+.chip{ background:var(--chip); border-radius:20px; padding:4px 12px; font-size:12px; font-weight:700; color:var(--ink-soft); }
 .player-list{ display:grid; gap:10px; margin-bottom:20px;}
 .player-row{
-  display:flex; align-items:center; justify-content:space-between; background:#fffdf7; border:2px solid #ECE5D2;
-  border-radius:12px; padding:10px 16px; font-weight:700;
+  display:flex; align-items:center; justify-content:space-between; background:var(--card-2); border:2px solid var(--line);
+  border-radius:12px; padding:10px 16px; font-weight:700; transition:border-color .2s, transform .18s;
 }
+.player-row:hover{ border-color:var(--accent); }
 .player-row .name{ display:flex; align-items:center; gap:8px;}
-.host-badge{ background:var(--chalk); color:var(--board); font-size:11px; padding:2px 8px; border-radius:20px;}
+.host-badge{ background:var(--title); color:var(--board-from); font-size:11px; padding:2px 8px; border-radius:20px;}
 .waiting-msg{ text-align:center; color:var(--ink-soft); font-size:14px; }
 
 /* ---- game screen ---- */
 .game-layout{ display:grid; grid-template-columns:1fr 220px; gap:18px; }
 @media (max-width:700px){ .game-layout{ grid-template-columns:1fr; } }
-.timer-track{ background:#ECE5D2; border-radius:20px; height:10px; overflow:hidden; margin-bottom:16px;}
-.timer-fill{ height:100%; background:linear-gradient(90deg,var(--chalk),var(--mul)); border-radius:20px; transition:width .2s linear; width:100%;}
+.timer-track{ background:var(--line); border-radius:20px; height:10px; overflow:hidden; margin-bottom:16px;}
+.timer-fill{ height:100%; background:linear-gradient(90deg,var(--title),var(--accent)); border-radius:20px; transition:width .2s linear; width:100%;}
+.timer-fill.low{ background:linear-gradient(90deg,var(--wrong),#F2994A); animation:lowPulse 1s ease-in-out infinite; }
 .q-meta{ display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px;}
 .q-card{ text-align:center; padding:10px 6px 6px; min-height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center;}
 .op-tag{ font-size:12px; font-weight:700; padding:4px 12px; border-radius:20px; color:#fff; margin-bottom:12px;}
+.op-tag.tagIn{ animation:tagIn .3s ease backwards; }
 .q-expr{ direction:ltr; unicode-bidi:isolate; font-family:'Baloo Bhaijaan 2',sans-serif; font-size:clamp(34px,7vw,50px); margin-bottom:18px;}
+.q-expr.pop{ animation:exprPop .45s cubic-bezier(.2,1.2,.4,1) backwards; }
 .q-expr sup{ font-size:.55em; }
 .answer-zone{ width:100%; max-width:380px; margin:0 auto;}
 .type-row{ display:flex; gap:8px; }
 .type-row input{ flex:1; font-family:'Baloo Bhaijaan 2',sans-serif; font-size:22px; text-align:center; direction:ltr; }
-.type-row button{ background:var(--board); color:var(--chalk); border:none; border-radius:12px; padding:0 18px; font-family:'Baloo Bhaijaan 2',sans-serif; font-size:15px; cursor:pointer;}
+.type-row button{ background:var(--btn-bg); color:var(--btn-fg); border:none; border-radius:12px; padding:0 18px; font-family:'Baloo Bhaijaan 2',sans-serif; font-size:15px; cursor:pointer; transition:transform .18s; }
+.type-row button:hover{ transform:translateY(-2px); }
 .choice-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-.choice-btn{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:20px; border:2px solid #ECE5D2; background:#fffdf7; border-radius:12px; padding:12px; cursor:pointer; direction:ltr; transition:.15s;}
-.choice-btn:hover:not(:disabled){ border-color:var(--mul); transform:translateY(-2px);}
-.choice-btn.picked{ border-color:var(--mul); background:color-mix(in srgb, var(--mul) 10%, white); }
-.choice-btn.correct{ background:color-mix(in srgb, var(--correct) 18%, white); border-color:var(--correct);}
-.choice-btn.wrong{ background:color-mix(in srgb, var(--wrong) 15%, white); border-color:var(--wrong);}
+.choice-btn{
+  font-family:'Baloo Bhaijaan 2',sans-serif; font-size:20px; border:2px solid var(--line); background:var(--card-2); color:var(--ink);
+  border-radius:12px; padding:12px; cursor:pointer; direction:ltr;
+  transition:transform .18s, border-color .2s, background-color .25s;
+  animation:riseIn .35s ease backwards;
+}
+.choice-btn:hover:not(:disabled){ border-color:var(--accent); transform:translateY(-3px); }
+.choice-btn.picked{ border-color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, var(--card)); }
+.choice-btn.correct{ background:color-mix(in srgb, var(--correct) 20%, var(--card)); border-color:var(--correct); animation:okPulse .45s ease; }
+.choice-btn.wrong{ background:color-mix(in srgb, var(--wrong) 16%, var(--card)); border-color:var(--wrong); animation:wobble .4s ease; }
 .choice-btn:disabled{ cursor:default; }
 .feedback{ margin-top:14px; font-size:14px; font-weight:700; min-height:20px;}
-.feedback.ok{ color:var(--correct);} .feedback.bad{ color:var(--wrong);} .feedback.wait{ color:var(--ink-soft);}
+.feedback.ok{ color:var(--correct); animation:okPulse .45s ease; }
+.feedback.bad{ color:var(--wrong); animation:wobble .4s ease; }
+.feedback.wait{ color:var(--ink-soft); }
 
-.scoreboard{ background:#fffdf7; border:2px solid #ECE5D2; border-radius:14px; padding:14px; height:fit-content;}
+.scoreboard{ background:var(--card-2); border:2px solid var(--line); border-radius:14px; padding:14px; height:fit-content; }
 .scoreboard h4{ font-family:'Baloo Bhaijaan 2',sans-serif; margin:0 0 10px; font-size:14px;}
-.sb-row{ display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 0; font-size:13px; border-bottom:1px solid #F0EAD9;}
+.sb-row{ display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 6px; font-size:13px; border-bottom:1px solid var(--line); border-radius:8px; }
 .sb-row:last-child{ border-bottom:none; }
+.sb-row.me{ background:color-mix(in srgb, var(--accent) 12%, transparent); }
 .sb-rank{ font-weight:800; color:var(--ink-soft); width:18px;}
 .sb-name{ flex:1; display:flex; align-items:center; gap:5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-.sb-score{ font-family:'Baloo Bhaijaan 2',sans-serif; color:var(--board); }
-.answered-dot{ width:8px; height:8px; border-radius:50%; background:var(--correct); flex-shrink:0;}
+.sb-score{ font-family:'Baloo Bhaijaan 2',sans-serif; color:var(--btn-bg); display:inline-block; }
+.sb-score.bump{ animation:bump .6s ease; }
+.answered-dot{ width:8px; height:8px; border-radius:50%; background:var(--correct); flex-shrink:0; animation:dotPing 1.2s ease-out 1; }
 .end-game-link{ background:none; border:none; color:var(--ink-soft); font-size:12.5px; text-decoration:underline; cursor:pointer; margin-top:14px; display:block; width:100%; text-align:center; font-family:inherit;}
 
 /* ---- results ---- */
 .podium{ display:flex; align-items:flex-end; justify-content:center; gap:12px; margin-bottom:26px;}
-.podium .slot{ text-align:center; }
-.podium .bar{ width:78px; border-radius:10px 10px 0 0; display:flex; align-items:flex-start; justify-content:center; padding-top:8px; font-family:'Baloo Bhaijaan 2',sans-serif; color:#fff; font-size:20px;}
+.podium .slot{ text-align:center; animation:slotIn .6s ease backwards; }
+.podium .slot.s3{ animation-delay:.05s; } .podium .slot.s2{ animation-delay:.3s; } .podium .slot.s1{ animation-delay:.55s; }
+.podium .bar{
+  width:78px; border-radius:10px 10px 0 0; display:flex; align-items:flex-start; justify-content:center; padding-top:8px;
+  font-family:'Baloo Bhaijaan 2',sans-serif; color:#fff; font-size:20px; transform-origin:bottom;
+  animation:growUp .8s cubic-bezier(.2,.9,.3,1.05) backwards;
+}
+.podium .slot.s3 .bar{ animation-delay:.05s; } .podium .slot.s2 .bar{ animation-delay:.3s; } .podium .slot.s1 .bar{ animation-delay:.55s; }
 .podium .slot.s1 .bar{ height:110px; background:linear-gradient(180deg,#F2C94C,#E0AC1F);}
 .podium .slot.s2 .bar{ height:82px; background:linear-gradient(180deg,#B9C4C0,#8FA09A);}
 .podium .slot.s3 .bar{ height:60px; background:linear-gradient(180deg,#E0A97A,#C9855A);}
@@ -177,22 +374,50 @@ input[type=text]:focus{ border-color:var(--mul); }
 .save-status.err{ color:var(--wrong); font-weight:700; }
 .result-btns{ display:flex; gap:10px; }
 
+/* ---- confetti (خفيف، مرة واحدة عند النتائج) ---- */
+.confetti{ position:fixed; top:-16px; z-index:60; border-radius:2px; pointer-events:none; animation:fall linear forwards; }
+
 /* ---- toast ---- */
 .toast-box{ position:fixed; bottom:20px; left:20px; right:20px; display:flex; flex-direction:column; align-items:center; gap:8px; z-index:50; pointer-events:none; }
-.toast{ background:var(--board); color:#fff; padding:10px 18px; border-radius:12px; font-size:14px; font-weight:700; box-shadow:var(--card-shadow); }
-footer{ text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16px; opacity:.7;}
+.toast{ background:var(--board-from); color:#fff; padding:10px 18px; border-radius:12px; font-size:14px; font-weight:700; box-shadow:var(--shadow); animation:toastIn .3s ease backwards; }
+footer{ text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16px; opacity:.8;}
+
+/* ============================================================
+   إيقاف الحركة: من زر ✨ أو إذا كان الجهاز يفضّل تقليل الحركة
+============================================================ */
+html[data-fx="off"] *, html[data-fx="off"] *::before, html[data-fx="off"] *::after{
+  animation:none !important; transition:none !important;
+}
+html[data-fx="off"] .bg-fx, html[data-fx="off"] .confetti{ display:none !important; }
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{ animation:none !important; transition:none !important; }
+  .bg-fx, .confetti{ display:none !important; }
+}
 </style>
 </head>
 <body>
+<div class="bg-fx" id="bgFx" aria-hidden="true"></div>
 <div class="wrap">
 
   <div class="board">
     <div class="board-head">
-      <div>
-        <h1>🧮 ملعب الأرقام — أونلاين</h1>
+      <div class="brand">
+        <h1><span class="logo-emoji">🧮</span><span class="logo-text">ملعب الأرقام — أونلاين</span></h1>
         <p>تحدَّ أصدقاءك في مسابقة رياضيات حية</p>
       </div>
-      <a class="admin-link" href="admin.html" title="لوحة الأدمن" aria-label="لوحة الأدمن">🔐</a>
+      <div class="head-actions">
+        <button class="head-btn" id="themeBtn" type="button" title="تغيير الثيم" aria-label="تغيير الثيم" aria-expanded="false">🎨</button>
+        <a class="head-btn admin-link" href="admin.html" title="لوحة الأدمن" aria-label="لوحة الأدمن">🔐</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="theme-pop hidden" id="themePop" role="dialog" aria-label="اختيار الثيم">
+    <div class="theme-title">🎨 اختر الثيم</div>
+    <div class="theme-grid" id="themeGrid"></div>
+    <div class="fx-row">
+      <span>✨ الحركات والتأثيرات</span>
+      <button class="switch" id="fxSwitch" type="button" role="switch" aria-checked="true" aria-label="تشغيل أو إيقاف الحركات"></button>
     </div>
   </div>
 
@@ -429,6 +654,8 @@ function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
 function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 function pname(p){ return `${esc(p.name)}${p.tag ? `<span class="ptag">#${esc(p.tag)}</span>` : ''}`; }
 function timeLabel(t){ return t > 0 ? `${t} ثانية` : 'بدون وقت'; }
+function restartAnim(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+function fxIsOff(){ return document.documentElement.getAttribute('data-fx') === 'off'; }
 
 const state = {
   account: null,
@@ -757,6 +984,7 @@ socket.on('disconnect', () => {
 let timerInterval = null;
 
 socket.on('game_started', () => {
+  lastScores.clear();
   showScreen('game');
   $('#sbList').innerHTML = '';
   updateHostButtons();
@@ -772,6 +1000,7 @@ function updateHostButtons(){
 
 function startTimer(timeLimit){
   clearInterval(timerInterval);
+  timerFill.classList.remove('low');
   const t0 = performance.now();       // نعتمد ساعة الجهاز المحلية لتفادي فروقات التوقيت مع السيرفر
   $('#timerTrack').classList.toggle('hidden', timeLimit === 0);
   const tick = () => {
@@ -779,6 +1008,7 @@ function startTimer(timeLimit){
     if (timeLimit > 0){
       const rem = Math.max(0, timeLimit * 1000 - el);
       timerFill.style.width = (rem / (timeLimit * 1000) * 100) + '%';
+      timerFill.classList.toggle('low', rem > 0 && rem / (timeLimit * 1000) < 0.3);
       qTimerLabel.textContent = '⏱ ' + Math.ceil(rem / 1000);
       if (rem <= 0) clearInterval(timerInterval);
     } else {
@@ -803,6 +1033,8 @@ socket.on('new_question', q => {
   gOpTag.textContent = q.opLabel;
   gOpTag.style.background = OP_COLOR[q.opKey] || 'var(--mul)';
   gExpr.innerHTML = formatExpr(q.exprHTML) + ' = ؟';
+  restartAnim(gExpr, 'pop');
+  restartAnim(gOpTag, 'tagIn');
   gFeedback.textContent = ''; gFeedback.className = 'feedback';
 
   if (q.mode === 'type'){
@@ -812,9 +1044,10 @@ socket.on('new_question', q => {
   } else {
     gChoiceGrid.classList.remove('hidden'); gTypeRow.classList.add('hidden');
     gChoiceGrid.innerHTML = '';
-    q.choices.forEach(c => {
+    q.choices.forEach((c, i) => {
       const btn = document.createElement('button');
       btn.className = 'choice-btn';
+      btn.style.animationDelay = (i * 60) + 'ms';
       btn.textContent = c;
       btn.addEventListener('click', () => submitAnswer(c, btn));
       gChoiceGrid.appendChild(btn);
@@ -865,6 +1098,7 @@ socket.on('answer_result', ({ correct, pointsEarned }) => {
 
 socket.on('question_ended', ({ correctAnswer, leaderboard }) => {
   clearInterval(timerInterval);
+  timerFill.classList.remove('low');
   if (state.qTimeLimit > 0) timerFill.style.width = '0%';
 
   if (!gChoiceGrid.classList.contains('hidden')){
@@ -886,15 +1120,19 @@ socket.on('question_ended', ({ correctAnswer, leaderboard }) => {
   renderScoreboard(leaderboard);
 });
 
+const lastScores = new Map();
 function renderScoreboard(players){
   const sbList = $('#sbList');
   sbList.innerHTML = '';
   players.forEach((p, i) => {
     const row = document.createElement('div');
-    row.className = 'sb-row';
+    row.className = 'sb-row' + (p.id === socket.id ? ' me' : '');
+    const prev = lastScores.get(p.id);
+    const bumped = prev !== undefined && p.score > prev;
+    lastScores.set(p.id, p.score);
     row.innerHTML = `<span class="sb-rank">${i + 1}</span>
       <span class="sb-name">${p.answeredThisRound ? '<span class="answered-dot"></span>' : ''}${esc(p.name)}${p.streak >= 3 ? ' 🔥' + p.streak : ''}</span>
-      <span class="sb-score">${p.score}</span>`;
+      <span class="sb-score${bumped ? ' bump' : ''}">${p.score}</span>`;
     sbList.appendChild(row);
   });
 }
@@ -911,6 +1149,7 @@ socket.on('game_over', async ({ leaderboard, matchLog, loggerId }) => {
   clearInterval(timerInterval);
   showScreen('results');
   renderResults(leaderboard);
+  if (leaderboard[0] && leaderboard[0].score > 0) spawnConfetti();
   await persistResults(matchLog, loggerId);
 });
 
@@ -1003,6 +1242,96 @@ async function persistResults(matchLog, loggerId){
 
 $('#playAgainBtn').addEventListener('click', () => socket.emit('start_game', { roomCode: state.roomCode }));
 $('#backHomeBtn').addEventListener('click', leaveRoom);
+
+/* ============================================================
+   الثيمات والتأثيرات
+============================================================ */
+const THEMES = [
+  { id:'night',    name:'ليلي',    icon:'🌙', dots:['#0C1222','#7C9CFF','#A9BBFF'], meta:'#1B2548' },
+  { id:'notebook', name:'السبورة', icon:'📓', dots:['#0E1A16','#F2C94C','#22403A'], meta:'#22403A' },
+  { id:'ocean',    name:'المحيط',  icon:'🌊', dots:['#07161C','#3CC3E6','#0E4A63'], meta:'#0E4A63' },
+  { id:'sunset',   name:'الغروب',  icon:'🌅', dots:['#1C1018','#FF8A65','#A23A5C'], meta:'#A23A5C' },
+  { id:'forest',   name:'الغابة',  icon:'🌿', dots:['#0C1710','#7ED36B','#245A33'], meta:'#245A33' }
+];
+
+function applyTheme(id){
+  const t = THEMES.find(x => x.id === id) || THEMES[0];
+  document.documentElement.setAttribute('data-theme', t.id);
+  lsSet('np_theme', t.id);
+  $$('.swatch').forEach(b => b.classList.toggle('active', b.dataset.id === t.id));
+  const m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.setAttribute('content', t.meta);
+}
+
+function buildBgFx(){
+  const box = $('#bgFx');
+  box.innerHTML = '';
+  const syms = ['+', '−', '×', '÷', '√', 'π', '%', '=', '²', '∑'];
+  const n = window.innerWidth < 700 ? 9 : 16;
+  for (let i = 0; i < n; i++){
+    const s = document.createElement('span');
+    s.textContent = syms[i % syms.length];
+    const dur = 24 + Math.random() * 22;
+    s.style.cssText =
+      `left:${(Math.random() * 96).toFixed(1)}%;` +
+      `font-size:${(20 + Math.random() * 30).toFixed(0)}px;` +
+      `--o:${(0.07 + Math.random() * 0.07).toFixed(3)};` +
+      `--dx:${(Math.random() * 120 - 60).toFixed(0)}px;` +
+      `--rot:${(Math.random() * 80 - 40).toFixed(0)}deg;` +
+      `animation-duration:${dur.toFixed(1)}s;` +
+      `animation-delay:-${(Math.random() * dur).toFixed(1)}s`;
+    box.appendChild(s);
+  }
+}
+
+function setFx(on, persist = true){
+  document.documentElement.setAttribute('data-fx', on ? 'on' : 'off');
+  if (persist) lsSet('np_fx', on ? 'on' : 'off');
+  $('#fxSwitch').setAttribute('aria-checked', String(on));
+  if (on) buildBgFx(); else $('#bgFx').innerHTML = '';
+}
+
+function spawnConfetti(){
+  if (fxIsOff()) return;
+  const colors = ['#4A90D9', '#E8975C', '#9B6FD9', '#D9678F', '#3FBFA1', '#F2C94C'];
+  for (let i = 0; i < 36; i++){
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    const size = 6 + Math.floor(Math.random() * 6);
+    el.style.cssText =
+      `width:${size}px;height:${size}px;left:${(Math.random() * 100).toFixed(1)}vw;` +
+      `background:${colors[i % colors.length]};--dx:${(Math.random() * 160 - 80).toFixed(0)}px;` +
+      `animation-duration:${(2.6 + Math.random() * 2).toFixed(2)}s;animation-delay:${(Math.random() * 0.6).toFixed(2)}s`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 5400);
+  }
+}
+
+(function initThemes(){
+  const grid = $('#themeGrid');
+  THEMES.forEach(t => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch';
+    b.dataset.id = t.id;
+    b.innerHTML = `<span class="dots">${t.dots.map(c => `<i style="background:${c}"></i>`).join('')}</span><span>${t.icon} ${t.name}</span>`;
+    b.addEventListener('click', () => applyTheme(t.id));
+    grid.appendChild(b);
+  });
+  applyTheme(lsGet('np_theme') || 'night');
+  setFx(!fxIsOff(), false);
+
+  const btn = $('#themeBtn'), pop = $('#themePop');
+  const closePop = () => { pop.classList.add('hidden'); btn.setAttribute('aria-expanded', 'false'); };
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const nowHidden = pop.classList.toggle('hidden');
+    btn.setAttribute('aria-expanded', String(!nowHidden));
+  });
+  document.addEventListener('click', e => { if (!pop.classList.contains('hidden') && !pop.contains(e.target)) closePop(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
+  $('#fxSwitch').addEventListener('click', () => setFx(fxIsOff()));
+})();
 
 /* ============================================================
    الإقلاع: استرجاع الحساب المحفوظ على الجهاز
