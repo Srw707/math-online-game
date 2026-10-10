@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>لوحة تحكم الأدمن — ملعب الأرقام</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<style>
+:root{
+  --bg:#0b1411; --panel:#12201c; --panel-2:#192b26; --line:#25403a;
+  --text:#e8f1ed; --muted:#8fa8a0;
+  --accent:#F2C94C; --mint:#3FBFA1; --blue:#5AA9E6; --purple:#9B7FE0;
+  --ok:#3FBF84; --warn:#E8B84A; --danger:#E5645A;
+  --shadow:0 20px 50px -20px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(circle at 85% 0%, rgba(63,191,161,.10), transparent 45%),
+    radial-gradient(circle at 0% 100%, rgba(242,201,76,.07), transparent 45%),
+    var(--bg);
+  color:var(--text); font-family:'Tajawal',sans-serif; min-height:100vh; line-height:1.5;
+}
+.hidden{display:none !important;}
+button{font-family:inherit;}
+h1,h2,h3{font-family:'Baloo Bhaijaan 2','Tajawal',sans-serif; margin:0;}
+
+/* ---------- lock screen ---------- */
+.lock{
+  position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(circle at 50% 30%, #14291f, var(--bg) 70%); padding:20px;
+}
+.lock-card{
+  width:100%; max-width:380px; text-align:center; background:var(--panel); border:1px solid var(--line);
+  border-radius:22px; padding:34px 28px; box-shadow:var(--shadow);
+}
+.lock-card .ico{font-size:44px; margin-bottom:6px;}
+.lock-card h2{font-size:24px; color:var(--accent); margin-bottom:6px;}
+.lock-card p{color:var(--muted); font-size:14px; margin:0 0 20px;}
+.pin-input{
+  width:100%; background:var(--bg); border:2px solid var(--line); color:var(--text); border-radius:14px;
+  padding:14px; font-size:26px; letter-spacing:10px; text-align:center; outline:none; direction:ltr;
+  font-family:'Baloo Bhaijaan 2',sans-serif; transition:border-color .15s;
+}
+.pin-input:focus{border-color:var(--accent);}
+.pin-msg{min-height:22px; margin:12px 0 4px; font-size:13px; font-weight:700; color:var(--danger);}
+.shake{animation:shake .4s ease;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;
+  border:1px solid var(--line); background:var(--panel-2); color:var(--text);
+  border-radius:12px; padding:10px 16px; font-size:14px; font-weight:700; transition:.15s;
+}
+.btn:hover:not(:disabled){transform:translateY(-1px); border-color:var(--mint);}
+.btn:disabled{opacity:.5; cursor:not-allowed;}
+.btn.primary{background:var(--accent); color:#1b2a22; border-color:var(--accent);}
+.btn.primary:hover:not(:disabled){border-color:#fff;}
+.btn.danger{background:rgba(229,100,90,.12); color:#ff8f86; border-color:rgba(229,100,90,.45);}
+.btn.danger:hover:not(:disabled){background:var(--danger); color:#fff; border-color:var(--danger);}
+.btn.solid-danger{background:var(--danger); color:#fff; border-color:var(--danger);}
+.btn.block{width:100%;}
+a.btn{text-decoration:none;}
+.back-link{
+  display:inline-block; margin-top:14px; color:var(--muted); font-size:13.5px; font-weight:700;
+  text-decoration:none; transition:color .15s;
+}
+.back-link:hover{color:var(--accent);}
+.icon-btn{
+  background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; padding:4px 8px; border-radius:8px;
+}
+.icon-btn:hover{color:var(--text); background:var(--panel-2);}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1180px; margin:0 auto; padding:20px 16px 60px;}
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:16px 20px; margin-bottom:18px;
+  box-shadow:var(--shadow);
+}
+.brand h1{font-size:22px; color:var(--accent);}
+.brand small{color:var(--muted); font-size:12.5px;}
+.top-actions{display:flex; gap:10px; flex-wrap:wrap;}
+
+.stats-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px;}
+@media (max-width:860px){.stats-grid{grid-template-columns:repeat(2,1fr);}}
+.stat{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px 16px;}
+.stat .lbl{color:var(--muted); font-size:12.5px; margin-bottom:4px;}
+.stat .val{font-family:'Baloo Bhaijaan 2',sans-serif; font-size:28px; line-height:1.2;}
+.stat.c1 .val{color:var(--accent);} .stat.c2 .val{color:var(--mint);} .stat.c3 .val{color:var(--blue);} .stat.c4 .val{color:var(--purple);}
+
+.tabs{display:flex; gap:8px; margin-bottom:14px;}
+.tab{
+  background:var(--panel); border:1px solid var(--line); color:var(--muted); cursor:pointer;
+  border-radius:12px; padding:10px 20px; font-size:14.5px; font-weight:700; transition:.15s;
+}
+.tab.active{background:var(--accent); color:#1b2a22; border-color:var(--accent);}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:18px; box-shadow:var(--shadow);}
+.toolbar{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+.input, .select{
+  background:var(--bg); border:1.5px solid var(--line); color:var(--text); border-radius:12px;
+  padding:11px 14px; font-size:14.5px; font-family:inherit; outline:none; transition:border-color .15s;
+}
+.input:focus,.select:focus{border-color:var(--mint);}
+.toolbar .input{flex:1; min-width:200px;}
+.hint{color:var(--muted); font-size:12.5px; margin:-4px 0 12px;}
+
+/* ---------- tables ---------- */
+.table-wrap{overflow-x:auto;}
+table.t{width:100%; border-collapse:collapse; font-size:14px;}
+table.t th{
+  text-align:right; color:var(--muted); font-weight:700; font-size:12.5px; padding:10px 12px;
+  border-bottom:1px solid var(--line); white-space:nowrap;
+}
+table.t td{padding:12px; border-bottom:1px solid rgba(37,64,58,.55); vertical-align:middle;}
+table.t tbody tr.row{cursor:pointer; transition:background .12s;}
+table.t tbody tr.row:hover{background:var(--panel-2);}
+.tag{direction:ltr; unicode-bidi:isolate; color:var(--mint); font-family:'Baloo Bhaijaan 2',sans-serif; font-size:13.5px;}
+.badge{
+  display:inline-flex; align-items:center; justify-content:center; min-width:26px; padding:2px 10px; border-radius:20px;
+  font-size:12px; font-weight:800; background:rgba(242,201,76,.14); color:var(--accent);
+}
+.badge.mint{background:rgba(63,191,161,.14); color:var(--mint);}
+.badge.red{background:rgba(229,100,90,.15); color:#ff8f86;}
+.badge.green{background:rgba(63,191,132,.15); color:var(--ok);}
+.badge.blue{background:rgba(90,169,230,.15); color:var(--blue);}
+.muted{color:var(--muted);}
+.ok{color:var(--ok);} .bad{color:#ff8f86;}
+.ellipsis{max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:bottom;}
+.empty{text-align:center; color:var(--muted); padding:34px 10px; font-size:14.5px;}
+.loading{text-align:center; color:var(--muted); padding:40px 10px;}
+.spinner{width:28px; height:28px; border:3px solid var(--line); border-top-color:var(--accent); border-radius:50%; margin:0 auto 10px; animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media (max-width:760px){
+  table.t thead{display:none;}
+  table.t, table.t tbody, table.t tr, table.t td{display:block; width:100%;}
+  table.t tr{background:var(--panel-2); border:1px solid var(--line); border-radius:14px; margin-bottom:10px; padding:8px 12px;}
+  table.t td{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:6px 0; border:0;}
+  table.t td::before{content:attr(data-label); color:var(--muted); font-size:12px; flex-shrink:0;}
+  .ellipsis{max-width:200px;}
+}
+
+/* ---------- modals ---------- */
+.modal{
+  position:fixed; inset:0; z-index:60; background:rgba(3,8,6,.72); backdrop-filter:blur(3px);
+  display:flex; align-items:flex-start; justify-content:center; padding:24px 14px; overflow-y:auto;
+}
+.modal-card{
+  width:100%; max-width:780px; background:var(--panel); border:1px solid var(--line); border-radius:22px;
+  box-shadow:var(--shadow); animation:pop .22s ease; margin:auto 0;
+}
+.modal-card.sm{max-width:440px;}
+@keyframes pop{from{opacity:0; transform:translateY(14px) scale(.98)}to{opacity:1; transform:none}}
+.modal-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:16px 20px; border-bottom:1px solid var(--line);}
+.modal-head h3{font-size:19px; color:var(--accent);}
+.modal-body{padding:18px 20px 22px;}
+.modal-foot{display:flex; gap:10px; justify-content:flex-start; flex-wrap:wrap; margin-top:18px;}
+
+.form-grid{display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px;}
+@media (max-width:620px){.form-grid{grid-template-columns:1fr;}}
+.field label{display:block; color:var(--muted); font-size:12.5px; font-weight:700; margin-bottom:6px;}
+.field .input{width:100%;}
+.field .tag-input{direction:ltr; text-align:left;}
+.form-err{color:#ff8f86; font-size:13px; font-weight:700; min-height:20px; margin-top:10px;}
+.section-h{font-size:14px; font-weight:800; color:var(--text); margin:20px 0 10px;}
+.section-h:first-child{margin-top:0;}
+
+.mini-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:10px;}
+@media (max-width:620px){.mini-grid{grid-template-columns:repeat(2,1fr);}}
+.mini{background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:12px;}
+.mini .h{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-weight:800; font-size:13px;}
+.mini .r{display:flex; justify-content:space-between; font-size:12.5px; color:var(--muted); padding:2px 0;}
+.mini .r b{color:var(--text);}
+.mini.total{border-color:rgba(242,201,76,.5);}
+
+/* match details */
+.match-meta{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+.p-tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+.p-tab{
+  background:var(--bg); border:1px solid var(--line); color:var(--muted); border-radius:10px; padding:8px 14px;
+  cursor:pointer; font-size:13.5px; font-weight:700;
+}
+.p-tab.active{border-color:var(--accent); color:var(--accent);}
+.summary-row{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px; font-size:13.5px;}
+.timebar{height:6px; background:var(--bg); border-radius:6px; overflow:hidden; margin-top:6px; min-width:120px;}
+.timebar > i{display:block; height:100%; border-radius:6px;}
+.time-txt{font-size:12.5px; color:var(--muted);}
+.qexpr{direction:ltr; unicode-bidi:isolate; font-family:'Baloo Bhaijaan 2',sans-serif; font-size:16px; display:inline-block;}
+.qexpr sup{font-size:.65em;}
+
+/* toasts */
+.toasts{position:fixed; bottom:20px; left:20px; z-index:200; display:flex; flex-direction:column; gap:8px;}
+.toast{
+  background:var(--panel-2); border:1px solid var(--line); border-right:4px solid var(--mint); color:var(--text);
+  padding:12px 16px; border-radius:12px; font-size:14px; font-weight:700; box-shadow:var(--shadow); animation:pop .2s ease;
+}
+.toast.err{border-right-color:var(--danger);}
+</style>
+</head>
+<body>
+
+<!-- ================= LOCK SCREEN ================= -->
+<div class="lock" id="lock">
+  <div class="lock-card" id="lockCard">
+    <div class="ico">🔐</div>
+    <h2>لوحة الأدمن</h2>
+    <p>أدخل رمز الدخول للمتابعة</p>
+    <input class="pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="••••" autofocus>
+    <div class="pin-msg" id="pinMsg"></div>
+    <button class="btn primary block" id="pinBtn">دخول</button>
+    <a class="back-link" href="index.html">→ العودة للعبة</a>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div class="wrap hidden" id="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <h1>🧮 ملعب الأرقام — لوحة الأدمن</h1>
+      <small>آخر تحديث: <span id="lastUpdated">—</span></small>
+    </div>
+    <div class="top-actions">
+      <a class="btn" href="index.html" id="backToGameBtn">🎮 العودة للعبة</a>
+      <button class="btn" id="refreshBtn">🔄 تحديث</button>
+      <button class="btn danger" id="clearAllBtn">🗑️ مسح كافة اللوجات (Clear All Logs)</button>
+      <button class="btn" id="logoutBtn">🚪 خروج</button>
+    </div>
+  </div>
+
+  <div class="stats-grid" id="statsGrid"></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="players">👥 اللاعبون</button>
+    <button class="tab" data-tab="logs">📜 سجل المباريات</button>
+  </div>
+
+  <!-- players -->
+  <div class="panel" id="panel-players">
+    <div class="toolbar">
+      <input class="input" id="playerSearch" type="text" placeholder="ابحث بالاسم أو التاج — مثال: راكان#a1001 أو #a1001" autocomplete="off">
+      <select class="select" id="playerSort">
+        <option value="name">ترتيب: الاسم</option>
+        <option value="best">ترتيب: أعلى سكور</option>
+        <option value="games">ترتيب: الأكثر لعبًا</option>
+        <option value="acc">ترتيب: نسبة الصحة</option>
+      </select>
+    </div>
+    <div class="hint">اضغط على أي لاعب لعرض إحصائياته وتعديل بياناته.</div>
+    <div class="table-wrap">
+      <table class="t">
+        <thead><tr>
+          <th>اللاعب</th><th>التاج</th><th>المجموعة</th><th>الألعاب</th><th>نسبة الصحة</th><th>أعلى سكور</th>
+        </tr></thead>
+        <tbody id="playersBody"></tbody>
+      </table>
+    </div>
+    <div class="empty hidden" id="playersEmpty"></div>
+  </div>
+
+  <!-- logs -->
+  <div class="panel hidden" id="panel-logs">
+    <div class="toolbar">
+      <input class="input" id="logSearch" type="text" placeholder="ابحث باسم الغرفة أو اسم/تاج لاعب" autocomplete="off">
+      <select class="select" id="logSize">
+        <option value="all">كل الغرف</option>
+        <option value="10">غرف 10 أسئلة</option>
+        <option value="15">غرف 15 سؤال</option>
+        <option value="20">غرف 20 سؤال</option>
+      </select>
+    </div>
+    <div class="hint">اضغط على أي مباراة لعرض التقرير التفصيلي للأسئلة والأوقات.</div>
+    <div class="table-wrap">
+      <table class="t">
+        <thead><tr>
+          <th>اليوم</th><th>الوقت</th><th>الغرفة</th><th>الأسئلة</th><th>اللاعبون</th><th>صحيحة</th><th>خاطئة</th><th></th>
+        </tr></thead>
+        <tbody id="logsBody"></tbody>
+      </table>
+    </div>
+    <div class="empty hidden" id="logsEmpty"></div>
+  </div>
+
+  <div class="loading hidden" id="loading"><div class="spinner"></div>جاري تحميل البيانات...</div>
+</div>
+
+<!-- ================= EDIT PLAYER MODAL ================= -->
+<div class="modal hidden" id="editModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="editTitle">ملف اللاعب</h3>
+      <button class="icon-btn" data-close aria-label="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="section-h">📊 إحصائيات اللاعب</div>
+      <div class="mini-grid" id="editStats"></div>
+
+      <div class="section-h">✏️ تعديل البيانات</div>
+      <div class="form-grid">
+        <div class="field"><label for="fName">اسم اللاعب</label><input class="input" id="fName" type="text" maxlength="20" autocomplete="off"></div>
+        <div class="field"><label for="fTag">رقم التاج (بدون #)</label><input class="input tag-input" id="fTag" type="text" maxlength="16" autocomplete="off" placeholder="a1001"></div>
+        <div class="field"><label for="fGroup">الحرف / المجموعة</label><input class="input tag-input" id="fGroup" type="text" maxlength="5" autocomplete="off" placeholder="a"></div>
+      </div>
+      <div class="form-err" id="fErr"></div>
+      <div class="modal-foot">
+        <button class="btn primary" id="saveBtn">💾 حفظ التعديلات</button>
+        <button class="btn" data-close>إلغاء</button>
+        <button class="btn danger" id="resetStatsBtn" style="margin-inline-start:auto;">🔄 تصفير السكور والإحصائيات</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MATCH DETAILS MODAL ================= -->
+<div class="modal hidden" id="matchModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>📋 تقرير المباراة التفصيلي</h3>
+      <button class="icon-btn" data-close aria-label="إغلاق">✕</button>
+    </div>
+    <div class="modal-body" id="matchBody"></div>
+  </div>
+</div>
+
+<!-- ================= CONFIRM MODAL ================= -->
+<div class="modal hidden" id="confirmModal">
+  <div class="modal-card sm">
+    <div class="modal-head"><h3 id="cTitle">تأكيد</h3><button class="icon-btn" data-close aria-label="إغلاق">✕</button></div>
+    <div class="modal-body">
+      <p id="cMsg" style="margin:0 0 6px; line-height:1.8;"></p>
+      <div class="modal-foot">
+        <button class="btn solid-danger" id="cOk">تأكيد</button>
+        <button class="btn" id="cCancel">إلغاء</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, get, update, remove, child } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCZE54SYz2CtuN5CFFW-8fL5-aCb7Z0xyw",
+  authDomain: "math-game-4cec4.firebaseapp.com",
+  databaseURL: "https://math-game-4cec4-default-rtdb.firebaseio.com",
+  projectId: "math-game-4cec4",
+  storageBucket: "math-game-4cec4.firebasestorage.app",
+  messagingSenderId: "734718503560",
+  appId: "1:734718503560:web:bc6b648b87e80ed76a0d3d",
+  measurementId: "G-98YFW11MJD"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const dbRef = ref(db);
+
+/* ============================================================
+   الإعدادات — غيّر القيمتين التاليتين قبل النشر
+============================================================ */
+const ADMIN_PIN   = "7mobeka";                         // رمز دخول الأدمن
+const ENC_KEY     = "q1w2#r4t5";       // مفتاح AES — لازم يطابق المفتاح المستخدم عند كتابة اللوجات في اللعبة
+const SESSION_KEY = "np_admin_auth";
+const ROOM_SIZES  = [10, 15, 20];
+const MAX_ATTEMPTS = 5;
+const LOCK_SECONDS = 30;
+
+/* ============================================================
+   أدوات مساعدة
+============================================================ */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+function esc(v){
+  return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// تطبيع النص العربي للبحث (يتجاهل التشكيل والفروقات البسيطة بين الحروف)
+function norm(s){
+  return String(s ?? '').toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
+    .trim();
+}
+
+function toList(x){
+  if (!x) return [];
+  if (Array.isArray(x)) return x.filter(v => v != null);
+  return Object.entries(x).map(([k, v]) => (v && typeof v === 'object' && v.id == null) ? { ...v, id: k } : v);
+}
+
+function secText(n){
+  n = Number(n);
+  if (!Number.isFinite(n)) return '—';
+  const r = Math.round(n * 10) / 10;
+  if (!Number.isInteger(r)) return `${r} ثانية`;
+  if (r === 1) return 'ثانية واحدة';
+  if (r === 2) return 'ثانيتين';
+  if (r >= 3 && r <= 10) return `${r} ثوانٍ`;
+  return `${r} ثانية`;
+}
+
+const LOCALE = 'ar-SA-u-ca-gregory-nu-latn';
+function fmtDay(ts){
+  if (!ts) return '—';
+  return new Date(ts).toLocaleDateString(LOCALE, { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+function fmtTime(ts){
+  if (!ts) return '—';
+  return new Date(ts).toLocaleTimeString(LOCALE, { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+function fmtExpr(text){
+  return esc(text).replace(/(\d+)\^(\d+)/g, '$1<sup>$2</sup>');
+}
+
+function toast(msg, isErr = false){
+  const el = document.createElement('div');
+  el.className = 'toast' + (isErr ? ' err' : '');
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function explainError(e){
+  const m = String((e && (e.code || e.message)) || e);
+  if (/permission/i.test(m)) return 'تم رفض الوصول من Firebase — راجع قواعد قاعدة البيانات (Rules).';
+  return 'حدث خطأ: ' + m;
+}
+
+/* ============================================================
+   النوافذ (Modals)
+============================================================ */
+function syncScrollLock(){
+  document.body.style.overflow = $$('.modal:not(.hidden)').length ? 'hidden' : '';
+}
+function openModal(el){ el.classList.remove('hidden'); syncScrollLock(); }
+function closeModal(el){
+  el.classList.add('hidden');
+  if (el._resolve){ const r = el._resolve; el._resolve = null; r(false); }
+  syncScrollLock();
+}
+$$('.modal').forEach(m => {
+  m.addEventListener('mousedown', e => { if (e.target === m) closeModal(m); });
+  $$('[data-close]', m).forEach(b => b.addEventListener('click', () => closeModal(m)));
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const open = $$('.modal:not(.hidden)');
+  if (open.length) closeModal(open[open.length - 1]);
+});
+
+const confirmModal = $('#confirmModal');
+function confirmDialog({ title, message, okText = 'تأكيد' }){
+  return new Promise(resolve => {
+    $('#cTitle').textContent = title;
+    $('#cMsg').textContent = message;
+    $('#cOk').textContent = okText;
+    const done = v => { confirmModal._resolve = null; closeModal(confirmModal); resolve(v); };
+    confirmModal._resolve = done;
+    $('#cOk').onclick = () => done(true);
+    $('#cCancel').onclick = () => done(false);
+    openModal(confirmModal);
+  });
+}
+
+/* ============================================================
+   قفل الدخول (PIN)
+============================================================ */
+const lockEl = $('#lock'), appEl = $('#app'), pinInput = $('#pinInput'), pinBtn = $('#pinBtn'), pinMsg = $('#pinMsg');
+let attempts = 0, lockedUntil = 0, lockTimer = null;
+
+function isAuthed(){ return sessionStorage.getItem(SESSION_KEY) === '1'; }
+
+function showApp(){
+  lockEl.classList.add('hidden');
+  appEl.classList.remove('hidden');
+  if (!state.started){ state.started = true; loadAll(); }
+}
+
+function startLockCountdown(){
+  pinInput.disabled = true; pinBtn.disabled = true;
+  clearInterval(lockTimer);
+  const tick = () => {
+    const left = Math.ceil((lockedUntil - Date.now()) / 1000);
+    if (left <= 0){
+      clearInterval(lockTimer);
+      attempts = 0;
+      pinInput.disabled = false; pinBtn.disabled = false;
+      pinMsg.textContent = '';
+      pinInput.focus();
+      return;
+    }
+    pinMsg.textContent = `محاولات كثيرة. حاول بعد ${left} ثانية`;
+  };
+  tick();
+  lockTimer = setInterval(tick, 500);
+}
+
+function tryUnlock(){
+  if (Date.now() < lockedUntil) return;
+  if (pinInput.value === ADMIN_PIN){
+    sessionStorage.setItem(SESSION_KEY, '1');
+    pinInput.value = ''; pinMsg.textContent = ''; attempts = 0;
+    showApp();
+    return;
+  }
+  attempts++;
+  pinInput.value = '';
+  const card = $('#lockCard');
+  card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+  if (attempts >= MAX_ATTEMPTS){
+    lockedUntil = Date.now() + LOCK_SECONDS * 1000;
+    startLockCountdown();
+  } else {
+    pinMsg.textContent = `رمز غير صحيح — المحاولات المتبقية: ${MAX_ATTEMPTS - attempts}`;
+  }
+}
+pinBtn.addEventListener('click', tryUnlock);
+pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+
+$('#logoutBtn').addEventListener('click', () => {
+  sessionStorage.removeItem(SESSION_KEY);
+  location.reload();
+});
+
+/* ============================================================
+   الحالة العامة وتحميل البيانات
+============================================================ */
+const state = {
+  started: false,
+  players: [], logs: [],
+  tab: 'players',
+  editingId: null,
+  matchLog: null, matchPid: null
+};
+
+// تفكيك تشفير اللوج وتطبيعه
+function decodeLog(id, raw){
+  const base = { id, ok:false, error:null, ts:0, roomName:'—', roomSize:0, timeLimit:0, players:[], questions:[], correct:0, wrong:0 };
+  let data = null;
+  try{
+    if (raw && typeof raw === 'object' && typeof raw.enc === 'string'){
+      const txt = CryptoJS.AES.decrypt(raw.enc, ENC_KEY).toString(CryptoJS.enc.Utf8);
+      if (!txt) throw new Error('bad key');
+      data = JSON.parse(txt);
+      if (data.ts == null && raw.ts != null) data.ts = raw.ts;
+    } else if (raw && typeof raw === 'object'){
+      data = raw;                      // سجل غير مشفّر (للتوافق مع بيانات قديمة)
+    } else {
+      throw new Error('invalid');
+    }
+  }catch(e){
+    base.error = 'تعذّر فك التشفير';
+    base.ts = Number(raw && raw.ts) || 0;
+    return base;
+  }
+
+  const questions = toList(data.questions).map(q => ({
+    text: q.text ?? q.expr ?? q.question ?? '؟',
+    correct: q.correct ?? q.answer_correct ?? q.correctAnswer,
+    timeLimit: Number(q.timeLimit) || 0,
+    answers: q.answers || null,
+    answer: q.answer, playerAnswer: q.playerAnswer, time: q.time, ok: q.ok
+  }));
+
+  let players = toList(data.players).map(p => ({
+    id: String(p.id ?? p.uid ?? p.name ?? ''),
+    name: p.name || 'لاعب',
+    tag: p.tag || '',
+    score: Number(p.score) || 0,
+    correct: p.correct, wrong: p.wrong
+  }));
+  if (!players.length){
+    const ids = new Set();
+    questions.forEach(q => q.answers && Object.keys(q.answers).forEach(k => ids.add(k)));
+    players = [...ids].map(k => ({ id:k, name:k, tag:'', score:0 }));
+  }
+
+  base.ok = true;
+  base.ts = Number(data.ts) || 0;
+  base.roomName = data.roomName || data.room || '—';
+  base.timeLimit = Number(data.timeLimit) || 0;
+  base.roomSize = Number(data.roomSize ?? data.questionCount) || questions.length;
+  base.players = players;
+  base.questions = questions;
+
+  let c = 0, w = 0;
+  if (questions.length){
+    const single = players.length === 1;
+    players.forEach(p => {
+      let pc = 0, pw = 0;
+      questions.forEach(q => {
+        const r = evalAnswer(q, p.id, single);
+        if (r.ok) pc++; else pw++;
+      });
+      p.correct = pc; p.wrong = pw;
+      c += pc; w += pw;
+    });
+  } else {
+    players.forEach(p => { c += Number(p.correct) || 0; w += Number(p.wrong) || 0; });
+  }
+  base.correct = c; base.wrong = w;
+  return base;
+}
+
+function evalAnswer(q, pid, single){
+  let a = q.answers && q.answers[pid];
+  if (!a && single && (q.answer !== undefined || q.playerAnswer !== undefined)){
+    a = { answer: q.answer ?? q.playerAnswer, time: q.time, ok: q.ok };
+  }
+  const time = a && a.time != null && a.time !== '' ? Number(a.time) : null;
+  if (!a || a.answer === undefined || a.answer === null || a.answer === ''){
+    return { answered:false, ok:false, answer:null, time };
+  }
+  let ok;
+  if (a.ok !== undefined) ok = !!a.ok;
+  else {
+    const x = Number(a.answer), y = Number(q.correct);
+    ok = (Number.isFinite(x) && Number.isFinite(y)) ? x === y : String(a.answer).trim() === String(q.correct).trim();
+  }
+  return { answered:true, ok, answer:a.answer, time };
+}
+
+async function loadAll(){
+  $('#loading').classList.remove('hidden');
+  $('#refreshBtn').disabled = true;
+  try{
+    const [pSnap, lSnap] = await Promise.all([ get(child(dbRef, 'players')), get(child(dbRef, 'logs')) ]);
+    const pv = pSnap.val() || {};
+    const lv = lSnap.val() || {};
+    state.players = Object.entries(pv).filter(([, v]) => v && typeof v === 'object').map(([id, v]) => ({ id, ...v }));
+    state.logs = Object.entries(lv).map(([id, v]) => decodeLog(id, v)).sort((a, b) => b.ts - a.ts);
+    renderAll();
+    $('#lastUpdated').textContent = new Date().toLocaleTimeString(LOCALE, { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const failed = state.logs.filter(l => !l.ok).length;
+    if (failed) toast(`تعذّر فك تشفير ${failed} لوج — تأكد من مطابقة ENC_KEY`, true);
+  }catch(e){
+    console.error(e);
+    toast(explainError(e), true);
+  }finally{
+    $('#loading').classList.add('hidden');
+    $('#refreshBtn').disabled = false;
+  }
+}
+$('#refreshBtn').addEventListener('click', loadAll);
+
+/* ============================================================
+   الإحصائيات
+============================================================ */
+function roomStats(p, size){
+  const s = (p.stats && p.stats['r' + size]) || {};
+  return { games:+s.games || 0, correct:+s.correct || 0, wrong:+s.wrong || 0, best:+s.best || 0 };
+}
+function playerTotals(p){
+  let games = 0, correct = 0, wrong = 0, best = Number(p.bestScore) || 0;
+  ROOM_SIZES.forEach(sz => {
+    const r = roomStats(p, sz);
+    games += r.games; correct += r.correct; wrong += r.wrong; best = Math.max(best, r.best);
+  });
+  const tot = correct + wrong;
+  return { games, correct, wrong, best, acc: tot ? Math.round(correct / tot * 100) : null };
+}
+const accText = a => a == null ? '—' : a + '%';
+
+function renderStats(){
+  const okLogs = state.logs.filter(l => l.ok);
+  const c = okLogs.reduce((s, l) => s + l.correct, 0);
+  const w = okLogs.reduce((s, l) => s + l.wrong, 0);
+  const acc = (c + w) ? Math.round(c / (c + w) * 100) + '%' : '—';
+  $('#statsGrid').innerHTML = `
+    <div class="stat c1"><div class="lbl">عدد اللاعبين</div><div class="val">${state.players.length}</div></div>
+    <div class="stat c2"><div class="lbl">عدد اللوجات المحفوظة</div><div class="val">${state.logs.length}</div></div>
+    <div class="stat c3"><div class="lbl">إجمالي الإجابات الصحيحة</div><div class="val">${c}</div></div>
+    <div class="stat c4"><div class="lbl">نسبة الصحة الإجمالية</div><div class="val">${acc}</div></div>`;
+}
+
+/* ============================================================
+   اللاعبون: بحث + عرض
+============================================================ */
+function matchPlayer(p, q){
+  const name = norm(p.name), tag = norm(p.tag);
+  if (q.includes('#')){
+    const i = q.indexOf('#');
+    const n = q.slice(0, i).trim();
+    const t = q.slice(i + 1).replace(/#/g, '').trim();
+    return (!n || name.includes(n)) && (!t || tag.includes(t));
+  }
+  return name.includes(q) || tag.includes(q) || `${name}#${tag}`.includes(q);
+}
+
+function renderPlayers(){
+  const q = norm($('#playerSearch').value);
+  const sort = $('#playerSort').value;
+  let list = state.players.map(p => ({ p, t: playerTotals(p) }));
+  if (q) list = list.filter(x => matchPlayer(x.p, q));
+
+  list.sort((a, b) => {
+    if (sort === 'best')  return b.t.best - a.t.best;
+    if (sort === 'games') return b.t.games - a.t.games;
+    if (sort === 'acc')   return (b.t.acc ?? -1) - (a.t.acc ?? -1);
+    return String(a.p.name || '').localeCompare(String(b.p.name || ''), 'ar');
+  });
+
+  const body = $('#playersBody');
+  const empty = $('#playersEmpty');
+  if (!list.length){
+    body.innerHTML = '';
+    empty.textContent = state.players.length ? 'لا توجد نتائج مطابقة للبحث.' : 'لا يوجد لاعبون مسجلون بعد.';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  body.innerHTML = list.map(({ p, t }) => `
+    <tr class="row" data-id="${esc(p.id)}">
+      <td data-label="اللاعب"><b>${esc(p.name || '—')}</b></td>
+      <td data-label="التاج"><span class="tag">#${esc(p.tag || '—')}</span></td>
+      <td data-label="المجموعة"><span class="badge">${esc(p.group || '—')}</span></td>
+      <td data-label="الألعاب">${t.games}</td>
+      <td data-label="نسبة الصحة">${accText(t.acc)}</td>
+      <td data-label="أعلى سكور"><b style="color:var(--accent)">${t.best}</b></td>
+    </tr>`).join('');
+}
+
+$('#playerSearch').addEventListener('input', renderPlayers);
+$('#playerSort').addEventListener('change', renderPlayers);
+$('#playersBody').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-id]');
+  if (tr) openEdit(tr.dataset.id);
+});
+
+/* ============================================================
+   تعديل اللاعب
+============================================================ */
+function renderEditStats(p){
+  const t = playerTotals(p);
+  const cards = ROOM_SIZES.map(sz => {
+    const r = roomStats(p, sz);
+    const tot = r.correct + r.wrong;
+    return `<div class="mini">
+      <div class="h"><span>غرف ${sz} سؤال</span><span class="badge blue">${r.games} لعبة</span></div>
+      <div class="r"><span>نسبة الصحة</span><b>${tot ? Math.round(r.correct / tot * 100) + '%' : '—'}</b></div>
+      <div class="r"><span>صحيحة / خاطئة</span><b>${r.correct} / ${r.wrong}</b></div>
+      <div class="r"><span>أعلى سكور</span><b>${r.best}</b></div>
+    </div>`;
+  }).join('');
+  $('#editStats').innerHTML = cards + `
+    <div class="mini total">
+      <div class="h"><span>الإجمالي</span><span class="badge">${t.games} لعبة</span></div>
+      <div class="r"><span>نسبة الصحة</span><b>${accText(t.acc)}</b></div>
+      <div class="r"><span>صحيحة / خاطئة</span><b>${t.correct} / ${t.wrong}</b></div>
+      <div class="r"><span>أعلى سكور</span><b>${t.best}</b></div>
+    </div>`;
+}
+
+function openEdit(id){
+  const p = state.players.find(x => x.id === id);
+  if (!p) return;
+  state.editingId = id;
+  $('#editTitle').textContent = `${p.name || 'لاعب'}#${p.tag || ''}`;
+  $('#fName').value = p.name || '';
+  $('#fTag').value = p.tag || '';
+  $('#fGroup').value = p.group || '';
+  $('#fErr').textContent = '';
+
+  renderEditStats(p);
+  openModal($('#editModal'));
+  setTimeout(() => $('#fName').focus(), 60);
+}
+
+// اقتراح الحرف/المجموعة تلقائيًا من التاج إذا كان الحقل فارغًا
+$('#fTag').addEventListener('input', () => {
+  const g = $('#fGroup');
+  if (!g.value.trim()){
+    const m = $('#fTag').value.trim().match(/^[A-Za-z]+/);
+    if (m) g.value = m[0].toLowerCase().slice(0, 5);
+  }
+});
+
+// تصفير إحصائيات اللاعب فقط (الاسم والتاج والمجموعة تبقى كما هي)
+$('#resetStatsBtn').addEventListener('click', async () => {
+  const id = state.editingId;
+  const p = state.players.find(x => x.id === id);
+  if (!p) return;
+
+  const ok = await confirmDialog({
+    title: 'تصفير الإحصائيات',
+    message: `سيتم تصفير إجمالي الألعاب والإجابات الصحيحة والخاطئة وأعلى سكور للاعب «${p.name || ''}#${p.tag || ''}». اسمه وتاجه ومجموعته لن تتغير، ولا يمكن التراجع عن التصفير. هل أنت متأكد؟`,
+    okText: 'نعم، صفّر'
+  });
+  if (!ok) return;
+
+  const zero = () => ({ games: 0, correct: 0, wrong: 0, best: 0 });
+  const patch = {
+    totalGames: 0, totalCorrect: 0, totalWrong: 0, bestScore: 0,
+    stats: { r10: zero(), r15: zero(), r20: zero() },
+    statsResetAt: Date.now()
+  };
+
+  const btn = $('#resetStatsBtn');
+  btn.disabled = true;
+  try{
+    await update(ref(db, 'players/' + id), patch);   // update يغيّر هذه الحقول فقط ولا يلمس name/tag/group
+    Object.assign(p, patch);
+    renderEditStats(p);
+    renderPlayers();
+    toast('تم تصفير إحصائيات اللاعب ✅');
+  }catch(e){
+    console.error(e);
+    toast(explainError(e), true);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+$('#saveBtn').addEventListener('click', async () => {
+  const id = state.editingId;
+  const p = state.players.find(x => x.id === id);
+  if (!p) return;
+
+  const name = $('#fName').value.trim();
+  const tag = $('#fTag').value.trim().replace(/^#+/, '').toLowerCase();
+  const group = $('#fGroup').value.trim().toLowerCase();
+  const err = $('#fErr');
+
+  if (!name) { err.textContent = 'اسم اللاعب مطلوب.'; return; }
+  if (name.includes('#')) { err.textContent = 'اسم اللاعب لا يمكن أن يحتوي على الرمز #.'; return; }
+  if (!/^[a-z0-9_-]{1,16}$/i.test(tag)) { err.textContent = 'رقم التاج مطلوب ويقبل أحرفًا إنجليزية وأرقامًا فقط (مثال: a1001).'; return; }
+  if (state.players.some(x => x.id !== id && String(x.tag || '').toLowerCase() === tag)){
+    err.textContent = 'رقم التاج مستخدم من لاعب آخر.'; return;
+  }
+  err.textContent = '';
+
+  const btn = $('#saveBtn');
+  btn.disabled = true;
+  try{
+    await update(ref(db, 'players/' + id), { name, tag, group, updatedAt: Date.now() });
+    Object.assign(p, { name, tag, group });
+    renderPlayers();
+    closeModal($('#editModal'));
+    toast('تم حفظ بيانات اللاعب ✅');
+  }catch(e){
+    console.error(e);
+    err.textContent = explainError(e);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* ============================================================
+   سجل المباريات
+============================================================ */
+function renderLogs(){
+  const q = norm($('#logSearch').value);
+  const size = $('#logSize').value;
+  let list = state.logs.slice();
+  if (size !== 'all') list = list.filter(l => !l.ok || l.roomSize === Number(size));
+  if (q){
+    list = list.filter(l => {
+      if (norm(l.roomName).includes(q)) return true;
+      return l.players.some(p => matchPlayer(p, q) || norm(p.name).includes(q));
+    });
+  }
+
+  const body = $('#logsBody');
+  const empty = $('#logsEmpty');
+  if (!list.length){
+    body.innerHTML = '';
+    empty.textContent = state.logs.length ? 'لا توجد نتائج مطابقة.' : 'لا توجد لوجات محفوظة.';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  body.innerHTML = list.map(l => {
+    const names = l.players.map(p => p.name).join('، ') || '—';
+    if (!l.ok){
+      return `<tr class="row" data-id="${esc(l.id)}">
+        <td data-label="اليوم">${l.ts ? esc(fmtDay(l.ts)) : '—'}</td>
+        <td data-label="الوقت">${l.ts ? esc(fmtTime(l.ts)) : '—'}</td>
+        <td data-label="الغرفة" colspan="1"><span class="badge red">${esc(l.error)}</span></td>
+        <td data-label="الأسئلة">—</td><td data-label="اللاعبون">—</td><td data-label="صحيحة">—</td><td data-label="خاطئة">—</td>
+        <td><button class="btn danger" data-del="${esc(l.id)}">حذف</button></td>
+      </tr>`;
+    }
+    return `<tr class="row" data-id="${esc(l.id)}">
+      <td data-label="اليوم">${esc(fmtDay(l.ts))}</td>
+      <td data-label="الوقت">${esc(fmtTime(l.ts))}</td>
+      <td data-label="الغرفة"><span class="tag">${esc(l.roomName)}</span></td>
+      <td data-label="الأسئلة"><span class="badge mint">${l.roomSize || '—'}</span></td>
+      <td data-label="اللاعبون"><span class="ellipsis" title="${esc(names)}">${esc(names)}</span></td>
+      <td data-label="صحيحة"><b class="ok">${l.correct}</b></td>
+      <td data-label="خاطئة"><b class="bad">${l.wrong}</b></td>
+      <td><button class="btn danger" data-del="${esc(l.id)}">🗑️ حذف</button></td>
+    </tr>`;
+  }).join('');
+}
+
+$('#logSearch').addEventListener('input', renderLogs);
+$('#logSize').addEventListener('change', renderLogs);
+
+$('#logsBody').addEventListener('click', async e => {
+  const del = e.target.closest('[data-del]');
+  if (del){
+    e.stopPropagation();
+    deleteLog(del.dataset.del);
+    return;
+  }
+  const tr = e.target.closest('tr[data-id]');
+  if (!tr) return;
+  const log = state.logs.find(l => l.id === tr.dataset.id);
+  if (!log) return;
+  if (!log.ok){ toast('هذا اللوج لا يمكن قراءته — تحقق من مفتاح التشفير.', true); return; }
+  openMatch(log);
+});
+
+async function deleteLog(id){
+  const ok = await confirmDialog({
+    title: 'حذف اللوج',
+    message: 'سيتم حذف هذا اللوج نهائيًا من قاعدة البيانات ولا يمكن التراجع. هل أنت متأكد؟',
+    okText: 'نعم، احذف'
+  });
+  if (!ok) return;
+  try{
+    await remove(ref(db, 'logs/' + id));
+    state.logs = state.logs.filter(l => l.id !== id);
+    renderLogs(); renderStats();
+    toast('تم حذف اللوج 🗑️');
+  }catch(e){
+    console.error(e);
+    toast(explainError(e), true);
+  }
+}
+
+$('#clearAllBtn').addEventListener('click', async () => {
+  if (!state.logs.length){ toast('لا توجد لوجات لحذفها.'); return; }
+  const ok = await confirmDialog({
+    title: 'مسح كافة اللوجات',
+    message: `سيتم حذف جميع اللوجات (${state.logs.length}) نهائيًا من Firebase لتفريغ المساحة. إحصائيات اللاعبين المحفوظة في ملفاتهم لن تتأثر. هل أنت متأكد؟`,
+    okText: 'نعم، امسح الكل'
+  });
+  if (!ok) return;
+  const btn = $('#clearAllBtn');
+  btn.disabled = true;
+  try{
+    await remove(ref(db, 'logs'));
+    state.logs = [];
+    renderLogs(); renderStats();
+    toast('تم مسح كافة اللوجات ✅');
+  }catch(e){
+    console.error(e);
+    toast(explainError(e), true);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* ============================================================
+   تقرير المباراة التفصيلي
+============================================================ */
+function openMatch(log){
+  state.matchLog = log;
+  state.matchPid = log.players[0] ? log.players[0].id : null;
+  renderMatch();
+  openModal($('#matchModal'));
+}
+
+function renderMatch(){
+  const log = state.matchLog;
+  if (!log) return;
+  const single = log.players.length === 1;
+  const player = log.players.find(p => p.id === state.matchPid);
+
+  let html = `<div class="match-meta">
+    <span class="badge">📅 ${esc(fmtDay(log.ts))}</span>
+    <span class="badge">🕒 ${esc(fmtTime(log.ts))}</span>
+    <span class="badge mint">🏷️ الغرفة: <span class="tag" style="margin-inline-start:4px">${esc(log.roomName)}</span></span>
+    <span class="badge blue">❓ ${log.questions.length || log.roomSize} سؤال</span>
+    ${log.timeLimit ? `<span class="badge">⏱️ ${esc(secText(log.timeLimit))} لكل سؤال</span>` : ''}
+  </div>`;
+
+  if (!log.players.length || !log.questions.length){
+    html += `<div class="empty">لا توجد تفاصيل أسئلة محفوظة لهذه المباراة.</div>`;
+    $('#matchBody').innerHTML = html;
+    return;
+  }
+
+  html += `<div class="p-tabs">` + log.players.map(p => `
+    <button class="p-tab ${p.id === state.matchPid ? 'active' : ''}" data-pid="${esc(p.id)}">
+      ${esc(p.name)}${p.tag ? ` <span class="tag">#${esc(p.tag)}</span>` : ''}
+    </button>`).join('') + `</div>`;
+
+  let c = 0, w = 0, u = 0, tSum = 0, tCnt = 0;
+  const rows = log.questions.map((q, i) => {
+    const r = evalAnswer(q, player.id, single);
+    const limit = q.timeLimit || log.timeLimit || 0;
+    if (r.ok) c++; else { w++; if (!r.answered) u++; }
+    if (r.time != null){ tSum += r.time; tCnt++; }
+
+    let timeCell;
+    if (r.time != null){
+      const ratio = limit ? Math.min(100, r.time / limit * 100) : 0;
+      const color = ratio < 50 ? 'var(--ok)' : ratio < 80 ? 'var(--warn)' : 'var(--danger)';
+      timeCell = `<div class="time-txt">${limit ? `استغرق ${esc(secText(r.time))} من أصل ${esc(secText(limit))}` : `استغرق ${esc(secText(r.time))}`}</div>
+        ${limit ? `<div class="timebar"><i style="width:${ratio}%; background:${color}"></i></div>` : ''}`;
+    } else if (!r.answered){
+      timeCell = `<div class="time-txt">${limit ? `انتهى الوقت (${esc(secText(limit))})` : 'لم يجب'}</div>`;
+    } else {
+      timeCell = `<div class="time-txt">—</div>`;
+    }
+
+    const status = r.ok ? '<span class="badge green">✔ صحيحة</span>'
+                 : r.answered ? '<span class="badge red">✘ خاطئة</span>'
+                 : '<span class="badge">— لم يجب</span>';
+    return `<tr>
+      <td data-label="#">${i + 1}</td>
+      <td data-label="السؤال"><span class="qexpr">${fmtExpr(q.text)}</span></td>
+      <td data-label="إجابة اللاعب">${r.answered ? `<b class="${r.ok ? 'ok' : 'bad'}">${esc(r.answer)}</b>` : '<span class="muted">—</span>'}</td>
+      <td data-label="الإجابة الصحيحة"><b>${esc(q.correct ?? '—')}</b></td>
+      <td data-label="الوقت">${timeCell}</td>
+      <td data-label="الحالة">${status}</td>
+    </tr>`;
+  }).join('');
+
+  html += `<div class="summary-row">
+    <span>✔ صحيحة: <b class="ok">${c}</b></span>
+    <span>✘ خاطئة: <b class="bad">${w - u}</b></span>
+    <span>— بدون إجابة: <b>${u}</b></span>
+    <span>⏱️ متوسط الوقت: <b>${tCnt ? esc(secText(tSum / tCnt)) : '—'}</b></span>
+    <span>🏆 السكور: <b style="color:var(--accent)">${player.score}</b></span>
+  </div>
+  <div class="table-wrap"><table class="t">
+    <thead><tr><th>#</th><th>السؤال</th><th>إجابة اللاعب</th><th>الإجابة الصحيحة</th><th>الوقت المستغرق</th><th>الحالة</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+
+  $('#matchBody').innerHTML = html;
+}
+
+$('#matchBody').addEventListener('click', e => {
+  const t = e.target.closest('[data-pid]');
+  if (!t) return;
+  state.matchPid = t.dataset.pid;
+  renderMatch();
+});
+
+/* ============================================================
+   التبويبات + التهيئة
+============================================================ */
+$$('.tab').forEach(tab => tab.addEventListener('click', () => {
+  state.tab = tab.dataset.tab;
+  $$('.tab').forEach(t => t.classList.toggle('active', t === tab));
+  $('#panel-players').classList.toggle('hidden', state.tab !== 'players');
+  $('#panel-logs').classList.toggle('hidden', state.tab !== 'logs');
+}));
+
+function renderAll(){ renderStats(); renderPlayers(); renderLogs(); }
+
+if (isAuthed()) showApp(); else pinInput.focus();
+</script>
+</body>
+</html>

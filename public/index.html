@@ -6,6 +6,7 @@
 <title>ملعب الأرقام — أونلاين</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 <style>
 :root{
   --paper:#FAF6EA; --paper-line:#E4DCC6;
@@ -37,6 +38,14 @@ body{
 }
 .board h1{ font-family:'Baloo Bhaijaan 2',sans-serif; color:var(--chalk); font-size:clamp(24px,5vw,34px); margin:0 0 4px; }
 .board p{ color:#CFE3DB; margin:0; font-size:14px; opacity:.85; }
+.board-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; position:relative; }
+.admin-link{
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+  width:42px; height:42px; border-radius:12px; font-size:20px; text-decoration:none;
+  background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.18); color:var(--chalk);
+  transition:.15s;
+}
+.admin-link:hover{ background:rgba(242,201,76,.22); transform:translateY(-2px); }
 
 .notebook{
   background:#fff; border-radius:18px; box-shadow:var(--card-shadow);
@@ -71,7 +80,7 @@ input[type=text]:focus{ border-color:var(--mul); }
 .op-chip.selected{ border-color:var(--c); background:color-mix(in srgb, var(--c) 12%, white); box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 20%, transparent);}
 
 .toggle-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
-.toggle-btn{ cursor:pointer; border:2px solid #ECE5D2; background:#fffdf7; border-radius:10px; padding:8px 14px; font-size:13px; font-weight:700; transition:.15s;}
+.toggle-btn{ cursor:pointer; border:2px solid #ECE5D2; background:#fffdf7; border-radius:10px; padding:8px 14px; font-size:13px; font-weight:700; transition:.15s; user-select:none;}
 .toggle-btn.selected{ border-color:var(--mul); background:color-mix(in srgb, var(--mul) 12%, white); color:var(--mul);}
 
 .btn{
@@ -83,14 +92,35 @@ input[type=text]:focus{ border-color:var(--mul); }
 .btn:not(:disabled):hover{ transform:translateY(-2px); }
 .btn.secondary{ background:#fff; color:var(--board); border:2px solid var(--board); }
 .error-msg{ color:var(--wrong); font-size:13px; font-weight:700; min-height:18px; margin-top:8px; text-align:center;}
+.hint-text{ color:var(--ink-soft); font-size:12.5px; margin:-6px 0 14px; }
+
+/* ---- loading ---- */
+.loading-box{ text-align:center; padding:50px 10px; color:var(--ink-soft); }
+.spinner{ width:32px; height:32px; border:4px solid #ECE5D2; border-top-color:var(--mul); border-radius:50%; margin:0 auto 12px; animation:spin .8s linear infinite; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+/* ---- auth / account ---- */
+.auth-note{ background:#FFF8DF; border:2px solid #F2E3A5; color:#6B5A12; border-radius:12px; padding:10px 14px; font-size:13px; margin:0 0 16px; }
+.acc-card{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  background:#fffdf7; border:2px solid #ECE5D2; border-radius:14px; padding:12px 16px; margin-bottom:18px;
+}
+.acc-name{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:19px; }
+.acc-tag{ direction:ltr; unicode-bidi:isolate; color:var(--mul); }
+.acc-stats{ color:var(--ink-soft); font-size:12.5px; margin-top:2px; }
+.link-danger{ background:none; border:2px solid #F1D3CF; color:var(--wrong); border-radius:10px; padding:7px 12px; font-weight:700; font-size:12.5px; cursor:pointer; font-family:inherit; }
+.link-danger:hover{ background:#FDF0EE; }
+.ptag{ direction:ltr; unicode-bidi:isolate; display:inline-block; color:var(--ink-soft); font-size:11px; font-weight:500; margin-inline-start:4px; }
 
 /* ---- lobby ---- */
 .room-code-box{
-  display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:22px;
-  background:var(--board); border-radius:14px; padding:16px; color:var(--chalk);
+  display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:16px;
+  background:var(--board); border-radius:14px; padding:16px; color:var(--chalk); flex-wrap:wrap;
 }
 .room-code-box .code{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:32px; letter-spacing:6px; direction:ltr;}
 .copy-btn{ background:rgba(255,255,255,.12); border:none; color:var(--chalk); border-radius:8px; padding:8px 12px; cursor:pointer; font-size:13px;}
+.chips{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; justify-content:center; }
+.chip{ background:#F3EEDD; border-radius:20px; padding:4px 12px; font-size:12px; font-weight:700; color:var(--ink-soft); }
 .player-list{ display:grid; gap:10px; margin-bottom:20px;}
 .player-row{
   display:flex; align-items:center; justify-content:space-between; background:#fffdf7; border:2px solid #ECE5D2;
@@ -104,7 +134,7 @@ input[type=text]:focus{ border-color:var(--mul); }
 .game-layout{ display:grid; grid-template-columns:1fr 220px; gap:18px; }
 @media (max-width:700px){ .game-layout{ grid-template-columns:1fr; } }
 .timer-track{ background:#ECE5D2; border-radius:20px; height:10px; overflow:hidden; margin-bottom:16px;}
-.timer-fill{ height:100%; background:linear-gradient(90deg,var(--chalk),var(--mul)); border-radius:20px; transition:width .1s linear; width:100%;}
+.timer-fill{ height:100%; background:linear-gradient(90deg,var(--chalk),var(--mul)); border-radius:20px; transition:width .2s linear; width:100%;}
 .q-meta{ display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px;}
 .q-card{ text-align:center; padding:10px 6px 6px; min-height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center;}
 .op-tag{ font-size:12px; font-weight:700; padding:4px 12px; border-radius:20px; color:#fff; margin-bottom:12px;}
@@ -116,7 +146,8 @@ input[type=text]:focus{ border-color:var(--mul); }
 .type-row button{ background:var(--board); color:var(--chalk); border:none; border-radius:12px; padding:0 18px; font-family:'Baloo Bhaijaan 2',sans-serif; font-size:15px; cursor:pointer;}
 .choice-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px;}
 .choice-btn{ font-family:'Baloo Bhaijaan 2',sans-serif; font-size:20px; border:2px solid #ECE5D2; background:#fffdf7; border-radius:12px; padding:12px; cursor:pointer; direction:ltr; transition:.15s;}
-.choice-btn:hover{ border-color:var(--mul); transform:translateY(-2px);}
+.choice-btn:hover:not(:disabled){ border-color:var(--mul); transform:translateY(-2px);}
+.choice-btn.picked{ border-color:var(--mul); background:color-mix(in srgb, var(--mul) 10%, white); }
 .choice-btn.correct{ background:color-mix(in srgb, var(--correct) 18%, white); border-color:var(--correct);}
 .choice-btn.wrong{ background:color-mix(in srgb, var(--wrong) 15%, white); border-color:var(--wrong);}
 .choice-btn:disabled{ cursor:default; }
@@ -125,13 +156,13 @@ input[type=text]:focus{ border-color:var(--mul); }
 
 .scoreboard{ background:#fffdf7; border:2px solid #ECE5D2; border-radius:14px; padding:14px; height:fit-content;}
 .scoreboard h4{ font-family:'Baloo Bhaijaan 2',sans-serif; margin:0 0 10px; font-size:14px;}
-.sb-row{ display:flex; align-items:center; justify-content:space-between; padding:7px 0; font-size:13px; border-bottom:1px solid #F0EAD9;}
+.sb-row{ display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 0; font-size:13px; border-bottom:1px solid #F0EAD9;}
 .sb-row:last-child{ border-bottom:none; }
 .sb-rank{ font-weight:800; color:var(--ink-soft); width:18px;}
 .sb-name{ flex:1; display:flex; align-items:center; gap:5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .sb-score{ font-family:'Baloo Bhaijaan 2',sans-serif; color:var(--board); }
 .answered-dot{ width:8px; height:8px; border-radius:50%; background:var(--correct); flex-shrink:0;}
-.end-game-link{ background:none; border:none; color:var(--ink-soft); font-size:12.5px; text-decoration:underline; cursor:pointer; margin-top:14px; display:block; width:100%; text-align:center;}
+.end-game-link{ background:none; border:none; color:var(--ink-soft); font-size:12.5px; text-decoration:underline; cursor:pointer; margin-top:14px; display:block; width:100%; text-align:center; font-family:inherit;}
 
 /* ---- results ---- */
 .podium{ display:flex; align-items:flex-end; justify-content:center; gap:12px; margin-bottom:26px;}
@@ -141,8 +172,14 @@ input[type=text]:focus{ border-color:var(--mul); }
 .podium .slot.s2 .bar{ height:82px; background:linear-gradient(180deg,#B9C4C0,#8FA09A);}
 .podium .slot.s3 .bar{ height:60px; background:linear-gradient(180deg,#E0A97A,#C9855A);}
 .podium .pname{ font-weight:800; font-size:13px; margin-top:6px; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-.full-board{ display:grid; gap:8px; margin-bottom:22px;}
+.full-board{ display:grid; gap:8px; margin-bottom:16px;}
+.save-status{ text-align:center; font-size:13px; color:var(--ink-soft); margin:0 0 16px; min-height:18px; }
+.save-status.err{ color:var(--wrong); font-weight:700; }
 .result-btns{ display:flex; gap:10px; }
+
+/* ---- toast ---- */
+.toast-box{ position:fixed; bottom:20px; left:20px; right:20px; display:flex; flex-direction:column; align-items:center; gap:8px; z-index:50; pointer-events:none; }
+.toast{ background:var(--board); color:#fff; padding:10px 18px; border-radius:12px; font-size:14px; font-weight:700; box-shadow:var(--card-shadow); }
 footer{ text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16px; opacity:.7;}
 </style>
 </head>
@@ -150,14 +187,61 @@ footer{ text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16p
 <div class="wrap">
 
   <div class="board">
-    <h1>🧮 ملعب الأرقام — أونلاين</h1>
-    <p id="boardSub">تحدَّ أصدقاءك في مسابقة رياضيات حية</p>
+    <div class="board-head">
+      <div>
+        <h1>🧮 ملعب الأرقام — أونلاين</h1>
+        <p>تحدَّ أصدقاءك في مسابقة رياضيات حية</p>
+      </div>
+      <a class="admin-link" href="admin.html" title="لوحة الأدمن" aria-label="لوحة الأدمن">🔐</a>
+    </div>
+  </div>
+
+  <!-- ============ LOADING ============ -->
+  <div id="screen-loading" class="notebook">
+    <div class="loading-box"><div class="spinner"></div>جاري التحميل...</div>
+  </div>
+
+  <!-- ============ AUTH (هوية اللاعب) ============ -->
+  <div id="screen-auth" class="notebook hidden">
+    <div class="section-title">👤 هويتك في اللعبة</div>
+    <div class="toggle-row" id="authTabs">
+      <div class="toggle-btn selected" data-mode="new">✨ لاعب جديد</div>
+      <div class="toggle-btn" data-mode="recover">🔑 لدي حساب</div>
+    </div>
+    <div class="auth-note hidden" id="authNote"></div>
+
+    <div id="formNew">
+      <div class="field">
+        <label for="newName">اسمك</label>
+        <input type="text" id="newName" maxlength="20" placeholder="اكتب اسمك هنا" autocomplete="off">
+      </div>
+      <p class="hint-text">سيتم إنشاء تاج فريد لك تلقائيًا، مثل: راكان#a1001</p>
+      <button class="btn" id="newBtn">إنشاء حسابي 🚀</button>
+    </div>
+
+    <div id="formRecover" class="hidden">
+      <div class="field">
+        <label for="recName">اسمك</label>
+        <input type="text" id="recName" maxlength="20" placeholder="الاسم المسجل في حسابك" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="recTag">تاج حسابك السابق</label>
+        <input type="text" id="recTag" maxlength="24" placeholder="مثال: a1001" autocomplete="off" style="direction:ltr; text-align:left;">
+      </div>
+      <button class="btn" id="recBtn">استرجاع حسابي 🔓</button>
+    </div>
+    <div class="error-msg" id="authErr"></div>
   </div>
 
   <!-- ============ HOME ============ -->
-  <div id="screen-home" class="notebook">
-    <div class="section-title">👤 اسمك</div>
-    <div class="field"><input type="text" id="nameInput" placeholder="اكتب اسمك هنا" maxlength="20"></div>
+  <div id="screen-home" class="notebook hidden">
+    <div class="acc-card">
+      <div>
+        <div class="acc-name" id="accName">—</div>
+        <div class="acc-stats" id="accStats">&nbsp;</div>
+      </div>
+      <button class="link-danger" id="logoutBtn">⏸️ إيقاف الحساب / خروج مؤقت</button>
+    </div>
 
     <div class="two-col">
       <div class="panel">
@@ -181,14 +265,22 @@ footer{ text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16p
           <div class="toggle-btn" data-c="15">15</div>
           <div class="toggle-btn" data-c="20">20</div>
         </div>
+        <div class="section-title" style="font-size:14px;margin-bottom:8px;">⏱️ وقت السؤال</div>
+        <div class="toggle-row" id="timeRow">
+          <div class="toggle-btn" data-t="10">10 ث</div>
+          <div class="toggle-btn" data-t="15">15 ث</div>
+          <div class="toggle-btn" data-t="20">20 ث</div>
+          <div class="toggle-btn" data-t="30">30 ث</div>
+          <div class="toggle-btn" data-t="0">♾️ بدون وقت</div>
+        </div>
         <button class="btn" id="createBtn" disabled>إنشاء الغرفة 🚀</button>
       </div>
 
       <div class="panel">
         <h3>🔑 الانضمام إلى غرفة</h3>
         <div class="field">
-          <label>رمز الغرفة</label>
-          <input type="text" id="joinCodeInput" placeholder="مثال: AB12C" maxlength="5" style="text-transform:uppercase; direction:ltr; text-align:center; letter-spacing:4px; font-family:'Baloo Bhaijaan 2',sans-serif;">
+          <label for="joinCodeInput">رمز الغرفة</label>
+          <input type="text" id="joinCodeInput" placeholder="مثال: AB12C" maxlength="5" autocomplete="off" style="text-transform:uppercase; direction:ltr; text-align:center; letter-spacing:4px; font-family:'Baloo Bhaijaan 2',sans-serif;">
         </div>
         <button class="btn secondary" id="joinBtn">انضمام للغرفة 🔗</button>
       </div>
@@ -203,6 +295,7 @@ footer{ text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16p
       <span class="code" id="lobbyCode">-----</span>
       <button class="copy-btn" id="copyCodeBtn">نسخ 📋</button>
     </div>
+    <div class="chips" id="lobbyChips"></div>
     <div class="section-title">👥 اللاعبون (<span id="playerCount">0</span>)</div>
     <div class="player-list" id="playerList"></div>
     <button class="btn" id="startGameBtn">ابدأ اللعبة 🚀</button>
@@ -218,13 +311,13 @@ footer{ text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16p
           <span id="qCounter">سؤال 1 / 10</span>
           <span id="qTimerLabel">⏱ 15</span>
         </div>
-        <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
+        <div class="timer-track" id="timerTrack"><div class="timer-fill" id="timerFill"></div></div>
         <div class="q-card">
           <div class="op-tag" id="gOpTag">جمع</div>
           <div class="q-expr" id="gExpr">؟</div>
           <div class="answer-zone">
             <div class="type-row hidden" id="gTypeRow">
-              <input type="text" inputmode="numeric" id="gTypeInput" placeholder="اكتب الإجابة">
+              <input type="text" inputmode="numeric" id="gTypeInput" placeholder="اكتب الإجابة" autocomplete="off">
               <button id="gSubmitBtn">تأكيد</button>
             </div>
             <div class="choice-grid hidden" id="gChoiceGrid"></div>
@@ -235,6 +328,7 @@ footer{ text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16p
       <div class="scoreboard">
         <h4>🏆 الترتيب الحي</h4>
         <div id="sbList"></div>
+        <button class="end-game-link hidden" id="skipBtn">⏭️ تخطي السؤال (المضيف)</button>
         <button class="end-game-link hidden" id="endGameBtn">إنهاء اللعبة الآن (المضيف)</button>
       </div>
     </div>
@@ -245,6 +339,7 @@ footer{ text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16p
     <div class="section-title" style="justify-content:center;">🏁 النتائج النهائية</div>
     <div class="podium" id="podium"></div>
     <div class="full-board" id="fullBoard"></div>
+    <div class="save-status" id="saveStatus"></div>
     <div class="result-btns">
       <button class="btn" id="playAgainBtn">العب مرة أخرى 🔁</button>
       <button class="btn secondary" id="backHomeBtn">مغادرة الغرفة</button>
@@ -253,10 +348,39 @@ footer{ text-align:center; color:var(--ink-soft); font-size:12px; margin-top:16p
 
   <footer>العب مع أصدقائك في نفس الوقت 🎈</footer>
 </div>
+<div class="toast-box" id="toastBox"></div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, get, set, push, runTransaction, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCZE54SYz2CtuN5CFFW-8fL5-aCb7Z0xyw",
+  authDomain: "math-game-4cec4.firebaseapp.com",
+  databaseURL: "https://math-game-4cec4-default-rtdb.firebaseio.com",
+  projectId: "math-game-4cec4",
+  storageBucket: "math-game-4cec4.firebasestorage.app",
+  messagingSenderId: "734718503560",
+  appId: "1:734718503560:web:bc6b648b87e80ed76a0d3d",
+  measurementId: "G-98YFW11MJD"
+};
+
+const ENC_KEY = "q1w2#r4t5"; // مفتاح AES السري الموحد لفك وتشغيل البيانات مع لوحة الأدمن
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 const socket = io();
+
+/* ============================================================
+   إعدادات
+============================================================ */
+const TAG_MIN = 1000;
+const TAG_MAX = 9999;
+const ACC_KEY = 'np_account';              // بيانات الحساب المحلي
+const DEVICE_FLAG = 'np_device_registered'; // علامة أن هذا الجهاز سجّل حسابًا من قبل
+// false: بعد "الخروج المؤقت" يُسمح فقط باسترجاع الحساب السابق (لا حسابات جديدة من نفس الجهاز)
+const ALLOW_NEW_ACCOUNT_ON_USED_DEVICE = false;
 
 const OPS = [
   {key:'add', label:'جمع', glyph:'+', color:'var(--add)'},
@@ -266,202 +390,448 @@ const OPS = [
   {key:'root', label:'الجذر التربيعي', glyph:'√', color:'var(--root)'},
   {key:'pow', label:'الأس', glyph:'x²', color:'var(--pow)'},
 ];
-const OP_COLOR = Object.fromEntries(OPS.map(o=>[o.key,o.color]));
+const OP_COLOR = Object.fromEntries(OPS.map(o => [o.key, o.color]));
+const OP_LABEL = Object.fromEntries(OPS.map(o => [o.key, o.label]));
+const DIFF_LABEL = { easy:'سهل', medium:'متوسط', hard:'صعب' };
 
-const local = { ops:new Set(), difficulty:null, mode:null, count:null, roomCode:null, isHost:false, myId:null, currentAnswered:false };
+/* ============================================================
+   أدوات مساعدة
+============================================================ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
-/* ---------- screens ---------- */
-const screens = ['home','lobby','game','results'];
+function esc(v){
+  return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function norm(s){
+  return String(s ?? '').toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
+    .replace(/\s+/g, ' ').trim();
+}
+function normDigits(s){
+  return String(s)
+    .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+}
+function cleanName(raw){
+  return String(raw ?? '').replace(/[#<>\u0000-\u001F]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20);
+}
+function toast(msg){
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  $('#toastBox').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+function pname(p){ return `${esc(p.name)}${p.tag ? `<span class="ptag">#${esc(p.tag)}</span>` : ''}`; }
+function timeLabel(t){ return t > 0 ? `${t} ثانية` : 'بدون وقت'; }
+
+const state = {
+  account: null,
+  ops: new Set(), difficulty: null, mode: null, count: null, timeLimit: null,
+  roomCode: null, isHost: false,
+  answered: false, lastResult: null, mySubmitted: null,
+  qTimeLimit: 0, savedKey: null
+};
+
+/* ============================================================
+   الشاشات
+============================================================ */
+const SCREENS = ['loading','auth','home','lobby','game','results'];
 function showScreen(name){
-  screens.forEach(s=> document.getElementById('screen-'+s).classList.toggle('hidden', s!==name));
+  SCREENS.forEach(s => $('#screen-' + s).classList.toggle('hidden', s !== name));
 }
 
-/* ---------- home setup UI ---------- */
-const opGrid = document.getElementById('opGrid');
-OPS.forEach(o=>{
+/* ============================================================
+   نظام الهوية والتاج
+============================================================ */
+function loadLocalAccount(){
+  try{
+    const a = JSON.parse(lsGet(ACC_KEY));
+    if (a && a.id && a.name && a.tag) return a;
+  }catch(e){}
+  return null;
+}
+function saveLocalAccount(a){
+  lsSet(ACC_KEY, JSON.stringify({ id:a.id, name:a.name, tag:a.tag, group:a.group }));
+  lsSet(DEVICE_FLAG, '1');
+}
+
+// المجموعة التالية: a→b … z→aa→ab
+function nextGroup(g){
+  const chars = g.split('');
+  let i = chars.length - 1;
+  while (i >= 0){
+    if (chars[i] !== 'z'){ chars[i] = String.fromCharCode(chars[i].charCodeAt(0) + 1); return chars.join(''); }
+    chars[i] = 'a'; i--;
+  }
+  return 'a' + chars.join('');
+}
+
+// حجز رقم تاج جديد بشكل ذري (آمن مع تزامن عدة لاعبين)
+async function allocateTag(){
+  const res = await runTransaction(ref(db, 'meta/tagCounter'), cur => {
+    let g = (cur && typeof cur.g === 'string' && cur.g) ? cur.g : 'a';
+    let n = (cur && Number.isInteger(cur.n)) ? cur.n : TAG_MIN - 1;
+    n += 1;
+    if (n > TAG_MAX){ g = nextGroup(g); n = TAG_MIN; }
+    return { g, n };
+  });
+  if (!res.committed) throw new Error('تعذّر حجز التاج');
+  const v = res.snapshot.val();
+  return { group: v.g, number: v.n };
+}
+
+async function findPlayerByTag(tag){
+  const snap = await get(query(ref(db, 'players'), orderByChild('tag'), equalTo(tag)));
+  if (!snap.exists()) return null;
+  let found = null;
+  snap.forEach(ch => { if (!found) found = { id: ch.key, ...ch.val() }; });
+  return found;
+}
+
+async function createAccount(rawName){
+  const name = cleanName(rawName);
+  if (!name) throw new Error('اكتب اسمك أولاً');
+
+  for (let attempt = 0; attempt < 25; attempt++){
+    const { group, number } = await allocateTag();
+    const tag = group + number;
+    if (await findPlayerByTag(tag)) continue;     // حماية إضافية من التكرار (مثلاً تاج عدّله الأدمن يدويًا)
+
+    const newRef = push(ref(db, 'players'));
+    const zero = () => ({ games:0, correct:0, wrong:0, best:0 });
+    await set(newRef, {
+      name, tag, group,
+      createdAt: Date.now(),
+      totalGames: 0, totalCorrect: 0, totalWrong: 0, bestScore: 0,
+      stats: { r10: zero(), r15: zero(), r20: zero() }
+    });
+    return { id: newRef.key, name, tag, group };
+  }
+  throw new Error('تعذّر إنشاء تاج فريد، حاول مرة أخرى');
+}
+
+async function recoverAccount(rawName, rawTag){
+  const name = cleanName(rawName);
+  let tag = normDigits(String(rawTag ?? '')).trim();
+  if (tag.includes('#')) tag = tag.split('#').pop();
+  tag = tag.trim().toLowerCase();
+  if (!name) throw new Error('اكتب اسمك');
+  if (!/^[a-z0-9_-]{1,16}$/.test(tag)) throw new Error('صيغة التاج غير صحيحة (مثال: a1001)');
+
+  const p = await findPlayerByTag(tag);
+  if (!p) throw new Error('لا يوجد حساب بهذا التاج');
+  if (norm(p.name) !== norm(name)) throw new Error('الاسم لا يطابق التاج المسجل');
+  return { id: p.id, name: p.name, tag: p.tag, group: p.group || '' };
+}
+
+/* ---------- واجهة الدخول ---------- */
+function setAuthMode(mode){
+  $$('#authTabs .toggle-btn').forEach(b => b.classList.toggle('selected', b.dataset.mode === mode));
+  $('#formNew').classList.toggle('hidden', mode !== 'new');
+  $('#formRecover').classList.toggle('hidden', mode !== 'recover');
+  $('#authErr').textContent = '';
+}
+function showAuth(){
+  const used = lsGet(DEVICE_FLAG) === '1';
+  const restricted = used && !ALLOW_NEW_ACCOUNT_ON_USED_DEVICE;
+  $('#authTabs').classList.toggle('hidden', restricted);
+  const note = $('#authNote');
+  if (restricted){
+    note.textContent = 'هذا الجهاز مرتبط بحساب سابق. أدخل اسمك وتاج حسابك لاسترجاعه دون إنشاء تاج جديد. نسيت التاج؟ اسأل الأدمن.';
+    note.classList.remove('hidden');
+  } else {
+    note.classList.add('hidden');
+  }
+  setAuthMode(used ? 'recover' : 'new');
+  showScreen('auth');
+}
+$$('#authTabs .toggle-btn').forEach(b => b.addEventListener('click', () => setAuthMode(b.dataset.mode)));
+
+async function runAuthAction(btn, busyText, fn){
+  const err = $('#authErr');
+  err.textContent = '';
+  const old = btn.textContent;
+  btn.disabled = true; btn.textContent = busyText;
+  try{
+    const acc = await fn();
+    saveLocalAccount(acc);
+    enterHome(acc);
+  }catch(e){
+    console.error(e);
+    err.textContent = (e && e.message) ? e.message : 'حدث خطأ غير متوقع';
+  }finally{
+    btn.disabled = false; btn.textContent = old;
+  }
+}
+$('#newBtn').addEventListener('click', () => runAuthAction($('#newBtn'), 'جاري الإنشاء...', () => createAccount($('#newName').value)));
+$('#recBtn').addEventListener('click', () => runAuthAction($('#recBtn'), 'جاري التحقق...', () => recoverAccount($('#recName').value, $('#recTag').value)));
+$('#newName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#newBtn').click(); });
+$('#recTag').addEventListener('keydown', e => { if (e.key === 'Enter') $('#recBtn').click(); });
+
+/* ---------- إيقاف الحساب / خروج مؤقت ---------- */
+$('#logoutBtn').addEventListener('click', () => {
+  if (!confirm('سيتم إيقاف حسابك على هذا الجهاز.\nللدخول مجددًا ستحتاج إلى اسمك وتاج حسابك (' + state.account.name + '#' + state.account.tag + ').\nهل تريد المتابعة؟')) return;
+  lsDel(ACC_KEY);               // نُبقي DEVICE_FLAG حتى لا يُنشأ حساب جديد من نفس الجهاز
+  state.account = null;
+  showAuth();
+});
+
+/* ---------- الشاشة الرئيسية ---------- */
+function summarizeStats(p){
+  let games = 0, c = 0, w = 0, best = Number(p.bestScore) || 0;
+  [10, 15, 20].forEach(sz => {
+    const s = (p.stats && p.stats['r' + sz]) || {};
+    games += +s.games || 0; c += +s.correct || 0; w += +s.wrong || 0; best = Math.max(best, +s.best || 0);
+  });
+  const acc = (c + w) ? Math.round(c / (c + w) * 100) + '%' : '—';
+  return `🎮 ${games} لعبة  ·  ✅ نسبة الصحة ${acc}  ·  🏆 أعلى سكور ${best}`;
+}
+async function refreshMyStats(){
+  if (!state.account) return;
+  try{
+    const snap = await get(ref(db, 'players/' + state.account.id));
+    if (snap.exists()) $('#accStats').textContent = summarizeStats(snap.val());
+  }catch(e){ console.warn(e); }
+}
+function enterHome(acc){
+  state.account = acc;
+  $('#accName').innerHTML = `${esc(acc.name)}<span class="acc-tag">#${esc(acc.tag)}</span>`;
+  $('#accStats').textContent = '';
+  $('#homeError').textContent = '';
+  showScreen('home');
+  refreshMyStats();
+}
+
+/* ---------- إعدادات الغرفة ---------- */
+const opGrid = $('#opGrid');
+OPS.forEach(o => {
   const el = document.createElement('div');
-  el.className='op-chip';
+  el.className = 'op-chip';
   el.style.setProperty('--c', o.color);
   el.innerHTML = `<span class="glyph">${o.glyph}</span>${o.label}`;
-  el.addEventListener('click', ()=>{
-    if(local.ops.has(o.key)){ local.ops.delete(o.key); el.classList.remove('selected'); }
-    else { local.ops.add(o.key); el.classList.add('selected'); }
+  el.addEventListener('click', () => {
+    if (state.ops.has(o.key)){ state.ops.delete(o.key); el.classList.remove('selected'); }
+    else { state.ops.add(o.key); el.classList.add('selected'); }
     validateCreate();
   });
   opGrid.appendChild(el);
 });
-document.querySelectorAll('#diffRow .toggle-btn').forEach(el=>{
-  el.addEventListener('click', ()=>{
-    document.querySelectorAll('#diffRow .toggle-btn').forEach(c=>c.classList.remove('selected'));
-    el.classList.add('selected'); local.difficulty = el.dataset.d; validateCreate();
+function bindToggleRow(rowSel, dataKey, assign){
+  $$(rowSel + ' .toggle-btn').forEach(el => {
+    el.addEventListener('click', () => {
+      $$(rowSel + ' .toggle-btn').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      assign(el.dataset[dataKey]);
+      validateCreate();
+    });
   });
-});
-document.querySelectorAll('#modeRow .toggle-btn').forEach(el=>{
-  el.addEventListener('click', ()=>{
-    document.querySelectorAll('#modeRow .toggle-btn').forEach(c=>c.classList.remove('selected'));
-    el.classList.add('selected'); local.mode = el.dataset.m; validateCreate();
-  });
-});
-document.querySelectorAll('#countRow .toggle-btn').forEach(el=>{
-  el.addEventListener('click', ()=>{
-    document.querySelectorAll('#countRow .toggle-btn').forEach(c=>c.classList.remove('selected'));
-    el.classList.add('selected'); local.count = parseInt(el.dataset.c,10); validateCreate();
-  });
-});
-const createBtn = document.getElementById('createBtn');
-const nameInput = document.getElementById('nameInput');
+}
+bindToggleRow('#diffRow', 'd', v => state.difficulty = v);
+bindToggleRow('#modeRow', 'm', v => state.mode = v);
+bindToggleRow('#countRow', 'c', v => state.count = parseInt(v, 10));
+bindToggleRow('#timeRow', 't', v => state.timeLimit = parseInt(v, 10));
+
+const createBtn = $('#createBtn');
 function validateCreate(){
-  createBtn.disabled = !(local.ops.size>0 && local.difficulty && local.mode && local.count);
+  createBtn.disabled = !(state.ops.size > 0 && state.difficulty && state.mode && state.count && state.timeLimit !== null);
 }
 
-const homeError = document.getElementById('homeError');
-function showHomeError(msg){ homeError.textContent = msg; setTimeout(()=>{ if(homeError.textContent===msg) homeError.textContent=''; }, 4000); }
+const homeError = $('#homeError');
+function showHomeError(msg){
+  homeError.textContent = msg;
+  setTimeout(() => { if (homeError.textContent === msg) homeError.textContent = ''; }, 4000);
+}
+function identityPayload(){
+  return { playerName: state.account.name, tag: state.account.tag, profileId: state.account.id };
+}
+function ensureConnected(){
+  if (!socket.connected){ showHomeError('لا يوجد اتصال بالخادم، حاول بعد لحظات'); return false; }
+  return true;
+}
 
-createBtn.addEventListener('click', ()=>{
-  const name = nameInput.value.trim();
-  if(!name){ showHomeError('اكتب اسمك أولاً'); nameInput.focus(); return; }
+createBtn.addEventListener('click', () => {
+  if (!ensureConnected()) return;
   socket.emit('create_room', {
-    playerName: name,
-    settings: { ops:[...local.ops], difficulty:local.difficulty, mode:local.mode, questionCount: local.count }
+    ...identityPayload(),
+    settings: { ops: [...state.ops], difficulty: state.difficulty, mode: state.mode, questionCount: state.count, timeLimit: state.timeLimit }
   });
 });
-
-document.getElementById('joinBtn').addEventListener('click', ()=>{
-  const name = nameInput.value.trim();
-  const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
-  if(!name){ showHomeError('اكتب اسمك أولاً'); nameInput.focus(); return; }
-  if(!code){ showHomeError('اكتب رمز الغرفة'); return; }
-  socket.emit('join_room', { playerName:name, roomCode:code });
+$('#joinBtn').addEventListener('click', () => {
+  const code = $('#joinCodeInput').value.trim().toUpperCase();
+  if (!code){ showHomeError('اكتب رمز الغرفة'); return; }
+  if (!ensureConnected()) return;
+  socket.emit('join_room', { ...identityPayload(), roomCode: code });
 });
+$('#joinCodeInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('#joinBtn').click(); });
 
-socket.on('room_error', ({message})=> showHomeError(message));
+socket.on('room_error', ({ message }) => showHomeError(message));
 
-/* ---------- lobby ---------- */
-socket.on('room_created', (room)=>{ enterLobby(room); });
-socket.on('room_joined', (room)=>{ enterLobby(room); });
+/* ============================================================
+   اللوبي
+============================================================ */
+socket.on('room_created', room => enterLobby(room));
+socket.on('room_joined', room => enterLobby(room));
 
 function enterLobby(room){
-  local.roomCode = room.code;
-  local.myId = socket.id;
+  state.roomCode = room.code;
+  state.savedKey = null;
   showScreen('lobby');
   renderLobby(room);
 }
 
 function renderLobby(room){
-  if(local.roomCode !== room.code) return;
-  document.getElementById('lobbyCode').textContent = room.code;
-  document.getElementById('playerCount').textContent = room.players.length;
-  local.isHost = room.hostId===socket.id;
+  if (state.roomCode !== room.code) return;
+  $('#lobbyCode').textContent = room.code;
+  $('#playerCount').textContent = room.players.length;
+  state.isHost = room.hostId === socket.id;
 
-  const list = document.getElementById('playerList');
-  list.innerHTML='';
-  room.players.forEach(p=>{
+  const s = room.settings || {};
+  const chips = [
+    ...(s.ops || []).map(k => OP_LABEL[k] || k),
+    DIFF_LABEL[s.difficulty] || '',
+    s.mode === 'type' ? '✍️ كتابة' : '🔘 اختيارات',
+    `${s.questionCount} سؤال`,
+    `⏱️ ${timeLabel(s.timeLimit)}`
+  ].filter(Boolean);
+  $('#lobbyChips').innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join('');
+
+  const list = $('#playerList');
+  list.innerHTML = '';
+  room.players.forEach(p => {
     const row = document.createElement('div');
-    row.className='player-row';
-    row.innerHTML = `<span class="name">${p.connected?'🟢':'⚪'} ${p.name}${p.isHost?'<span class=\"host-badge\">المضيف</span>':''}</span>`;
+    row.className = 'player-row';
+    row.innerHTML = `<span class="name">${p.connected ? '🟢' : '⚪'} ${pname(p)}${p.isHost ? '<span class="host-badge">المضيف</span>' : ''}</span>`;
     list.appendChild(row);
   });
 
-  const startBtn = document.getElementById('startGameBtn');
-  const waitMsg = document.getElementById('lobbyWaitMsg');
-  if(room.state==='lobby'){
-    startBtn.classList.toggle('hidden', !local.isHost);
-    waitMsg.classList.toggle('hidden', local.isHost);
+  if (room.state === 'lobby'){
+    $('#startGameBtn').classList.toggle('hidden', !state.isHost);
+    $('#lobbyWaitMsg').classList.toggle('hidden', state.isHost);
   }
 }
 
-socket.on('room_update', (room)=>{
-  if(room.state==='lobby'){
-    renderLobby(room);
-  } else if(room.state==='playing'){
-    local.isHost = room.hostId===socket.id;
+socket.on('room_update', room => {
+  if (state.roomCode !== room.code) return;
+  state.isHost = room.hostId === socket.id;
+  if (room.state === 'lobby') renderLobby(room);
+  else if (room.state === 'playing'){
     renderScoreboard(room.players);
-  } else if(room.state==='finished'){
-    local.isHost = room.hostId===socket.id;
+    updateHostButtons();
   }
 });
 
-document.getElementById('startGameBtn').addEventListener('click', ()=>{
-  socket.emit('start_game', { roomCode: local.roomCode });
-});
-document.getElementById('leaveLobbyBtn').addEventListener('click', leaveRoom);
-document.getElementById('copyCodeBtn').addEventListener('click', ()=>{
-  navigator.clipboard?.writeText(local.roomCode || '');
-  const btn = document.getElementById('copyCodeBtn');
-  const old = btn.textContent; btn.textContent='تم! ✅';
-  setTimeout(()=> btn.textContent = old, 1200);
+$('#startGameBtn').addEventListener('click', () => socket.emit('start_game', { roomCode: state.roomCode }));
+$('#leaveLobbyBtn').addEventListener('click', leaveRoom);
+$('#copyCodeBtn').addEventListener('click', () => {
+  try{ navigator.clipboard && navigator.clipboard.writeText(state.roomCode || ''); }catch(e){}
+  const btn = $('#copyCodeBtn');
+  const old = btn.textContent; btn.textContent = 'تم! ✅';
+  setTimeout(() => btn.textContent = old, 1200);
 });
 
 function leaveRoom(){
   socket.emit('leave_room');
-  local.roomCode=null;
-  showScreen('home');
+  state.roomCode = null;
+  clearInterval(timerInterval);
+  if (state.account) enterHome(state.account); else showAuth();
 }
 
-/* ---------- game ---------- */
-let timerInterval = null;
-
-socket.on('game_started', ()=>{
-  showScreen('game');
-  document.getElementById('endGameBtn').classList.toggle('hidden', !local.isHost);
+socket.on('disconnect', () => {
+  if (state.roomCode){
+    state.roomCode = null;
+    clearInterval(timerInterval);
+    toast('انقطع الاتصال بالخادم');
+    if (state.account) enterHome(state.account);
+  }
 });
 
-const gExpr = document.getElementById('gExpr');
-const gOpTag = document.getElementById('gOpTag');
-const gTypeRow = document.getElementById('gTypeRow');
-const gChoiceGrid = document.getElementById('gChoiceGrid');
-const gTypeInput = document.getElementById('gTypeInput');
-const gFeedback = document.getElementById('gFeedback');
-const timerFill = document.getElementById('timerFill');
-const qTimerLabel = document.getElementById('qTimerLabel');
+/* ============================================================
+   اللعب
+============================================================ */
+let timerInterval = null;
 
-socket.on('new_question', (q)=>{
-  local.currentAnswered = false;
-  document.getElementById('qCounter').textContent = `سؤال ${q.questionNumber} / ${q.totalQuestions}`;
+socket.on('game_started', () => {
+  showScreen('game');
+  $('#sbList').innerHTML = '';
+  updateHostButtons();
+});
+
+const gExpr = $('#gExpr'), gOpTag = $('#gOpTag'), gTypeRow = $('#gTypeRow'), gChoiceGrid = $('#gChoiceGrid');
+const gTypeInput = $('#gTypeInput'), gFeedback = $('#gFeedback'), timerFill = $('#timerFill'), qTimerLabel = $('#qTimerLabel');
+
+function updateHostButtons(){
+  $('#endGameBtn').classList.toggle('hidden', !state.isHost);
+  $('#skipBtn').classList.toggle('hidden', !(state.isHost && state.qTimeLimit === 0));
+}
+
+function startTimer(timeLimit){
+  clearInterval(timerInterval);
+  const t0 = performance.now();       // نعتمد ساعة الجهاز المحلية لتفادي فروقات التوقيت مع السيرفر
+  $('#timerTrack').classList.toggle('hidden', timeLimit === 0);
+  const tick = () => {
+    const el = performance.now() - t0;
+    if (timeLimit > 0){
+      const rem = Math.max(0, timeLimit * 1000 - el);
+      timerFill.style.width = (rem / (timeLimit * 1000) * 100) + '%';
+      qTimerLabel.textContent = '⏱ ' + Math.ceil(rem / 1000);
+      if (rem <= 0) clearInterval(timerInterval);
+    } else {
+      qTimerLabel.textContent = '♾️ بدون وقت · ' + Math.floor(el / 1000) + ' ث';
+    }
+  };
+  tick();
+  timerInterval = setInterval(tick, 200);
+}
+
+function formatExpr(expr){
+  return esc(expr).replace(/(\d+)\^(\d+)/, '$1<sup>$2</sup>');
+}
+
+socket.on('new_question', q => {
+  state.answered = false;
+  state.lastResult = null;
+  state.mySubmitted = null;
+  state.qTimeLimit = q.timeLimit || 0;
+
+  $('#qCounter').textContent = `سؤال ${q.questionNumber} / ${q.totalQuestions}`;
   gOpTag.textContent = q.opLabel;
   gOpTag.style.background = OP_COLOR[q.opKey] || 'var(--mul)';
   gExpr.innerHTML = formatExpr(q.exprHTML) + ' = ؟';
-  gFeedback.textContent=''; gFeedback.className='feedback';
+  gFeedback.textContent = ''; gFeedback.className = 'feedback';
 
-  if(q.mode==='type'){
+  if (q.mode === 'type'){
     gTypeRow.classList.remove('hidden'); gChoiceGrid.classList.add('hidden');
-    gTypeInput.value=''; gTypeInput.disabled=false;
-    setTimeout(()=>gTypeInput.focus(), 50);
+    gTypeInput.value = ''; gTypeInput.disabled = false;
+    setTimeout(() => gTypeInput.focus(), 50);
   } else {
     gChoiceGrid.classList.remove('hidden'); gTypeRow.classList.add('hidden');
-    gChoiceGrid.innerHTML='';
-    q.choices.forEach(c=>{
+    gChoiceGrid.innerHTML = '';
+    q.choices.forEach(c => {
       const btn = document.createElement('button');
-      btn.className='choice-btn';
+      btn.className = 'choice-btn';
       btn.textContent = c;
-      btn.addEventListener('click', ()=> submitAnswer(c, btn));
+      btn.addEventListener('click', () => submitAnswer(c, btn));
       gChoiceGrid.appendChild(btn);
     });
   }
-
-  clearInterval(timerInterval);
-  const timeLimitMs = q.timeLimit*1000;
-  function tick(){
-    const elapsed = Date.now() - q.startTime;
-    const remaining = Math.max(0, timeLimitMs - elapsed);
-    timerFill.style.width = (remaining/timeLimitMs*100)+'%';
-    qTimerLabel.textContent = '⏱ ' + Math.ceil(remaining/1000);
-    if(remaining<=0) clearInterval(timerInterval);
-  }
-  tick();
-  timerInterval = setInterval(tick, 100);
+  updateHostButtons();
+  startTimer(state.qTimeLimit);
 });
 
-function formatExpr(expr){
-  return expr.replace(/(\d+)\^(\d+)/, '$1<sup>$2</sup>');
-}
-
 function submitAnswer(value, btnEl){
-  if(local.currentAnswered) return;
-  local.currentAnswered = true;
-  socket.emit('submit_answer', { roomCode: local.roomCode, answer: value });
-  if(btnEl){
-    [...gChoiceGrid.children].forEach(b=> b.disabled=true);
+  if (state.answered) return;
+  state.answered = true;
+  state.mySubmitted = value;
+  socket.emit('submit_answer', { roomCode: state.roomCode, answer: value });
+  if (btnEl){
+    btnEl.classList.add('picked');
+    [...gChoiceGrid.children].forEach(b => b.disabled = true);
   } else {
     gTypeInput.disabled = true;
   }
@@ -469,33 +839,47 @@ function submitAnswer(value, btnEl){
   gFeedback.className = 'feedback wait';
 }
 
-document.getElementById('gSubmitBtn').addEventListener('click', ()=>{
-  const v = gTypeInput.value.trim();
-  if(v==='' || local.currentAnswered) return;
+$('#gSubmitBtn').addEventListener('click', () => {
+  if (state.answered) return;
+  const v = normDigits(gTypeInput.value).trim();
+  if (!/^\d{1,9}$/.test(v)){
+    gFeedback.textContent = 'اكتب رقمًا صحيحًا فقط';
+    gFeedback.className = 'feedback bad';
+    gTypeInput.focus();
+    return;
+  }
   submitAnswer(v, null);
 });
-gTypeInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('gSubmitBtn').click(); });
+gTypeInput.addEventListener('keydown', e => { if (e.key === 'Enter') $('#gSubmitBtn').click(); });
 
-socket.on('answer_result', ({correct, pointsEarned})=>{
-  if(correct){
+socket.on('answer_result', ({ correct, pointsEarned }) => {
+  state.lastResult = correct;
+  if (correct){
     gFeedback.textContent = `✅ صحيح! +${pointsEarned} نقطة`;
     gFeedback.className = 'feedback ok';
   } else {
-    gFeedback.textContent = `❌ إجابة خاطئة`;
+    gFeedback.textContent = '❌ إجابة خاطئة';
     gFeedback.className = 'feedback bad';
   }
 });
 
-socket.on('question_ended', ({correctAnswer, leaderboard})=>{
+socket.on('question_ended', ({ correctAnswer, leaderboard }) => {
   clearInterval(timerInterval);
-  timerFill.style.width='0%';
-  if(!gChoiceGrid.classList.contains('hidden')){
-    [...gChoiceGrid.children].forEach(b=>{
+  if (state.qTimeLimit > 0) timerFill.style.width = '0%';
+
+  if (!gChoiceGrid.classList.contains('hidden')){
+    [...gChoiceGrid.children].forEach(b => {
       b.disabled = true;
-      if(Number(b.textContent)===correctAnswer) b.classList.add('correct');
+      const isCorrect = Number(b.textContent) === correctAnswer;
+      if (isCorrect) b.classList.add('correct');
+      else if (b.classList.contains('picked')) b.classList.add('wrong');
     });
-  } else if(!local.currentAnswered){
-    gFeedback.textContent = `انتهى الوقت! الإجابة الصحيحة: ${correctAnswer}`;
+  }
+  if (!state.answered){
+    gFeedback.textContent = state.qTimeLimit > 0 ? `انتهى الوقت! الإجابة الصحيحة: ${correctAnswer}` : `تم تخطي السؤال. الإجابة الصحيحة: ${correctAnswer}`;
+    gFeedback.className = 'feedback bad';
+  } else if (state.lastResult === false){
+    gFeedback.textContent = `❌ إجابة خاطئة — الصحيحة: ${correctAnswer}`;
     gFeedback.className = 'feedback bad';
   }
   gTypeInput.disabled = true;
@@ -503,60 +887,148 @@ socket.on('question_ended', ({correctAnswer, leaderboard})=>{
 });
 
 function renderScoreboard(players){
-  const sbList = document.getElementById('sbList');
-  sbList.innerHTML='';
-  players.forEach((p,i)=>{
+  const sbList = $('#sbList');
+  sbList.innerHTML = '';
+  players.forEach((p, i) => {
     const row = document.createElement('div');
-    row.className='sb-row';
-    row.innerHTML = `<span class="sb-rank">${i+1}</span>
-      <span class="sb-name">${p.answeredThisRound?'<span class=\"answered-dot\"></span>':''}${p.name}${p.streak>=3?' 🔥'+p.streak:''}</span>
+    row.className = 'sb-row';
+    row.innerHTML = `<span class="sb-rank">${i + 1}</span>
+      <span class="sb-name">${p.answeredThisRound ? '<span class="answered-dot"></span>' : ''}${esc(p.name)}${p.streak >= 3 ? ' 🔥' + p.streak : ''}</span>
       <span class="sb-score">${p.score}</span>`;
     sbList.appendChild(row);
   });
 }
 
-document.getElementById('endGameBtn').addEventListener('click', ()=>{
-  socket.emit('end_game', { roomCode: local.roomCode });
+$('#skipBtn').addEventListener('click', () => socket.emit('skip_question', { roomCode: state.roomCode }));
+$('#endGameBtn').addEventListener('click', () => {
+  if (confirm('إنهاء اللعبة الآن للجميع؟')) socket.emit('end_game', { roomCode: state.roomCode });
 });
 
-/* ---------- results ---------- */
-socket.on('game_over', ({leaderboard})=>{
+/* ============================================================
+   النتائج + حفظ اللوج المشفر وتحديث الإحصائيات
+============================================================ */
+socket.on('game_over', async ({ leaderboard, matchLog, loggerId }) => {
   clearInterval(timerInterval);
   showScreen('results');
   renderResults(leaderboard);
+  await persistResults(matchLog, loggerId);
 });
 
 function renderResults(players){
-  const podium = document.getElementById('podium');
-  podium.innerHTML='';
-  const order = [1,0,2]; // silver, gold, bronze visual order
-  order.forEach(idx=>{
+  const podium = $('#podium');
+  podium.innerHTML = '';
+  [1, 0, 2].forEach(idx => {
     const p = players[idx];
-    if(!p) return;
-    const rankClass = idx===0?'s1':idx===1?'s2':'s3';
-    const medal = idx===0?'🥇':idx===1?'🥈':'🥉';
+    if (!p) return;
+    const rankClass = idx === 0 ? 's1' : idx === 1 ? 's2' : 's3';
+    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
     const slot = document.createElement('div');
-    slot.className='slot '+rankClass;
-    slot.innerHTML = `<div class="pname">${p.name}</div><div class="bar">${medal}</div><div style="font-family:'Baloo Bhaijaan 2',sans-serif;margin-top:4px;">${p.score}</div>`;
+    slot.className = 'slot ' + rankClass;
+    slot.innerHTML = `<div class="pname">${esc(p.name)}</div><div class="bar">${medal}</div><div style="font-family:'Baloo Bhaijaan 2',sans-serif;margin-top:4px;">${p.score}</div>`;
     podium.appendChild(slot);
   });
 
-  const full = document.getElementById('fullBoard');
-  full.innerHTML='';
-  players.forEach((p,i)=>{
+  const full = $('#fullBoard');
+  full.innerHTML = '';
+  players.forEach((p, i) => {
     const row = document.createElement('div');
-    row.className='player-row';
-    row.innerHTML = `<span class="name">${i+1}. ${p.name}${p.isHost?'<span class=\"host-badge\">المضيف</span>':''}</span><span style="font-family:'Baloo Bhaijaan 2',sans-serif;">${p.score} نقطة</span>`;
+    row.className = 'player-row';
+    row.innerHTML = `<span class="name">${i + 1}. ${pname(p)}${p.isHost ? '<span class="host-badge">المضيف</span>' : ''}</span><span style="font-family:'Baloo Bhaijaan 2',sans-serif;">${p.score} نقطة</span>`;
     full.appendChild(row);
   });
 
-  document.getElementById('playAgainBtn').classList.toggle('hidden', !local.isHost);
+  $('#playAgainBtn').classList.toggle('hidden', !state.isHost);
+  setSaveStatus('', false);
 }
 
-document.getElementById('playAgainBtn').addEventListener('click', ()=>{
-  socket.emit('start_game', { roomCode: local.roomCode });
-});
-document.getElementById('backHomeBtn').addEventListener('click', leaveRoom);
+function setSaveStatus(msg, isErr){
+  const el = $('#saveStatus');
+  el.textContent = msg;
+  el.classList.toggle('err', !!isErr);
+}
+
+// تحديث إحصائيات بروفايل اللاعب (ذريًا) تحت players/{playerId}
+async function updateMyStats(me, roomSize){
+  const acc = state.account;
+  await runTransaction(ref(db, 'players/' + acc.id), cur => {
+    const p = cur || { name: acc.name, tag: acc.tag, group: acc.group || '', createdAt: Date.now() };
+    p.totalGames = (+p.totalGames || 0) + 1;
+    p.totalCorrect = (+p.totalCorrect || 0) + me.correct;
+    p.totalWrong = (+p.totalWrong || 0) + me.wrong;
+    p.bestScore = Math.max(+p.bestScore || 0, me.score);
+    p.lastPlayedAt = Date.now();
+    if ([10, 15, 20].includes(roomSize)){
+      p.stats = p.stats || {};
+      const k = 'r' + roomSize;
+      const s = p.stats[k] || { games:0, correct:0, wrong:0, best:0 };
+      s.games = (+s.games || 0) + 1;
+      s.correct = (+s.correct || 0) + me.correct;
+      s.wrong = (+s.wrong || 0) + me.wrong;
+      s.best = Math.max(+s.best || 0, me.score);
+      p.stats[k] = s;
+    }
+    return p;
+  });
+}
+
+// تشفير اللوج بـ AES وإرساله إلى المسار logs (يكتبه لاعب واحد فقط يحدده السيرفر)
+async function writeEncryptedLog(matchLog){
+  const enc = CryptoJS.AES.encrypt(JSON.stringify(matchLog), ENC_KEY).toString();
+  await push(ref(db, 'logs'), { ts: matchLog.ts || Date.now(), enc });
+}
+
+async function persistResults(matchLog, loggerId){
+  if (!matchLog || !state.account) return;
+  const key = `${matchLog.roomName}:${matchLog.ts}`;
+  if (state.savedKey === key) return;          // منع التكرار
+  state.savedKey = key;
+  if (!matchLog.questions || !matchLog.questions.length) return;
+
+  setSaveStatus('جاري حفظ نتائجك...', false);
+  const errors = [];
+
+  const me = (matchLog.players || []).find(p => p.id === state.account.id);
+  if (me){
+    try{ await updateMyStats(me, matchLog.roomSize); }
+    catch(e){ console.error(e); errors.push('إحصائياتك'); }
+  }
+  if (loggerId && loggerId === socket.id){
+    try{ await writeEncryptedLog(matchLog); }
+    catch(e){ console.error(e); errors.push('سجل المباراة'); }
+  }
+
+  if (errors.length) setSaveStatus('تعذّر حفظ: ' + errors.join(' و ') + ' — تحقق من الاتصال.', true);
+  else setSaveStatus(me ? 'تم حفظ نتائجك وتحديث إحصائياتك ☁️' : '', false);
+}
+
+$('#playAgainBtn').addEventListener('click', () => socket.emit('start_game', { roomCode: state.roomCode }));
+$('#backHomeBtn').addEventListener('click', leaveRoom);
+
+/* ============================================================
+   الإقلاع: استرجاع الحساب المحفوظ على الجهاز
+============================================================ */
+(async function boot(){
+  const acc = loadLocalAccount();
+  if (!acc){ showAuth(); return; }
+  try{
+    const snap = await get(ref(db, 'players/' + acc.id));
+    if (snap.exists()){
+      const v = snap.val();
+      // مزامنة أي تعديل أجراه الأدمن (الاسم/التاج/المجموعة)
+      const synced = { id: acc.id, name: v.name || acc.name, tag: v.tag || acc.tag, group: v.group || acc.group || '' };
+      saveLocalAccount(synced);
+      enterHome(synced);
+    } else {
+      // الحساب لم يعد موجودًا في قاعدة البيانات
+      lsDel(ACC_KEY); lsDel(DEVICE_FLAG);
+      showAuth();
+    }
+  }catch(e){
+    console.warn(e);
+    toast('تعذّر الاتصال بقاعدة البيانات — سيتم استخدام بيانات حسابك المحفوظة');
+    enterHome(acc);
+  }
+})();
 </script>
 </body>
 </html>
