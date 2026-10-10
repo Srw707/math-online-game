@@ -66,6 +66,13 @@ h1,h2,h3{font-family:'Baloo Bhaijaan 2','Tajawal',sans-serif; margin:0;}
 .btn.solid-danger{background:var(--danger); color:#fff; border-color:var(--danger);}
 .btn.block{width:100%;}
 a.btn{text-decoration:none;}
+input[type=checkbox]{ width:18px; height:18px; accent-color:var(--accent); cursor:pointer; vertical-align:middle; }
+th.chk, td.chk{ width:42px; }
+td.act .btn{ padding:6px 12px; font-size:13px; }
+.create-result{
+  background:rgba(63,191,132,.12); border:1px solid rgba(63,191,132,.45); border-radius:12px;
+  padding:12px 14px; margin-top:12px; font-size:14px; line-height:1.8;
+}
 .back-link{
   display:inline-block; margin-top:14px; color:var(--muted); font-size:13.5px; font-weight:700;
   text-decoration:none; transition:color .15s;
@@ -251,12 +258,19 @@ table.t tbody tr.row:hover{background:var(--panel-2);}
         <option value="games">ترتيب: الأكثر لعبًا</option>
         <option value="acc">ترتيب: نسبة الصحة</option>
       </select>
+      <button class="btn" id="selInactiveBtn" type="button">☑️ تحديد من لم يلعب</button>
+      <button class="btn danger hidden" id="bulkDelBtn" type="button">🗑️ حذف المحدد (<span id="selCount">0</span>)</button>
     </div>
-    <div class="hint">اضغط على أي لاعب لعرض إحصائياته وتعديل بياناته.</div>
+    <div class="toolbar">
+      <button class="btn primary" id="createPlayerBtn" type="button">➕ إنشاء حساب جديد</button>
+      <button class="btn" id="renumberBtn" type="button" title="يملأ الفراغات التي تركتها الحسابات المحذوفة">🔢 إعادة ترتيب التاجات من الصفر</button>
+    </div>
+    <div class="hint">اضغط على أي لاعب لعرض إحصائياته وتعديل بياناته، أو حدّد عدة حسابات (مثل الحسابات المزعجة) لحذفها دفعة واحدة.</div>
     <div class="table-wrap">
       <table class="t">
         <thead><tr>
-          <th>اللاعب</th><th>التاج</th><th>المجموعة</th><th>الألعاب</th><th>نسبة الصحة</th><th>أعلى سكور</th>
+          <th class="chk"><input type="checkbox" id="selAll" aria-label="تحديد الكل"></th>
+          <th>اللاعب</th><th>التاج</th><th>المجموعة</th><th>الألعاب</th><th>نسبة الصحة</th><th>أعلى سكور</th><th></th>
         </tr></thead>
         <tbody id="playersBody"></tbody>
       </table>
@@ -312,6 +326,33 @@ table.t tbody tr.row:hover{background:var(--panel-2);}
         <button class="btn primary" id="saveBtn">💾 حفظ التعديلات</button>
         <button class="btn" data-close>إلغاء</button>
         <button class="btn danger" id="resetStatsBtn" style="margin-inline-start:auto;">🔄 تصفير السكور والإحصائيات</button>
+        <button class="btn danger" id="deletePlayerBtn" type="button">🗑️ حذف الحساب</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CREATE PLAYER MODAL ================= -->
+<div class="modal hidden" id="createModal">
+  <div class="modal-card sm">
+    <div class="modal-head">
+      <h3>➕ إنشاء حساب جديد</h3>
+      <button class="icon-btn" data-close aria-label="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="cName">اسم اللاعب</label>
+        <input class="input" id="cName" type="text" maxlength="20" autocomplete="off" placeholder="مثال: راكان">
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label for="cTag">تاج مخصص (اختياري)</label>
+        <input class="input tag-input" id="cTag" type="text" maxlength="16" autocomplete="off" placeholder="اتركه فارغًا لتوليد تاج تلقائي">
+      </div>
+      <div class="form-err" id="cErr"></div>
+      <div class="create-result hidden" id="cResult"></div>
+      <div class="modal-foot">
+        <button class="btn primary" id="cCreateBtn" type="button">إنشاء الحساب</button>
+        <button class="btn" data-close>إغلاق</button>
       </div>
     </div>
   </div>
@@ -333,7 +374,7 @@ table.t tbody tr.row:hover{background:var(--panel-2);}
   <div class="modal-card sm">
     <div class="modal-head"><h3 id="cTitle">تأكيد</h3><button class="icon-btn" data-close aria-label="إغلاق">✕</button></div>
     <div class="modal-body">
-      <p id="cMsg" style="margin:0 0 6px; line-height:1.8;"></p>
+      <p id="cMsg" style="margin:0 0 6px; line-height:1.8; white-space:pre-line;"></p>
       <div class="modal-foot">
         <button class="btn solid-danger" id="cOk">تأكيد</button>
         <button class="btn" id="cCancel">إلغاء</button>
@@ -346,7 +387,7 @@ table.t tbody tr.row:hover{background:var(--panel-2);}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, get, update, remove, child } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, get, set, update, remove, child, push, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCZE54SYz2CtuN5CFFW-8fL5-aCb7Z0xyw",
@@ -366,8 +407,8 @@ const dbRef = ref(db);
 /* ============================================================
    الإعدادات — غيّر القيمتين التاليتين قبل النشر
 ============================================================ */
-const ADMIN_PIN   = "7mobeka";                         // رمز دخول الأدمن
-const ENC_KEY     = "q1w2#r4t5";       // مفتاح AES — لازم يطابق المفتاح المستخدم عند كتابة اللوجات في اللعبة
+const ADMIN_PIN   = "1234";                         // رمز دخول الأدمن
+const ENC_KEY     = "change-this-secret-key";       // مفتاح AES — لازم يطابق المفتاح المستخدم عند كتابة اللوجات في اللعبة
 const SESSION_KEY = "np_admin_auth";
 const ROOM_SIZES  = [10, 15, 20];
 const MAX_ATTEMPTS = 5;
@@ -540,6 +581,7 @@ const state = {
   players: [], logs: [],
   tab: 'players',
   editingId: null,
+  selected: new Set(),
   matchLog: null, matchPid: null
 };
 
@@ -697,7 +739,7 @@ function matchPlayer(p, q){
   return name.includes(q) || tag.includes(q) || `${name}#${tag}`.includes(q);
 }
 
-function renderPlayers(){
+function getVisiblePlayers(){
   const q = norm($('#playerSearch').value);
   const sort = $('#playerSort').value;
   let list = state.players.map(p => ({ p, t: playerTotals(p) }));
@@ -709,6 +751,23 @@ function renderPlayers(){
     if (sort === 'acc')   return (b.t.acc ?? -1) - (a.t.acc ?? -1);
     return String(a.p.name || '').localeCompare(String(b.p.name || ''), 'ar');
   });
+  return list;
+}
+
+function updateBulkUI(visibleIds){
+  const n = state.selected.size;
+  $('#bulkDelBtn').classList.toggle('hidden', n === 0);
+  $('#selCount').textContent = n;
+  $('#selAll').checked = visibleIds.length > 0 && visibleIds.every(id => state.selected.has(id));
+}
+
+function renderPlayers(){
+  const list = getVisiblePlayers();
+  const visibleIds = list.map(x => x.p.id);
+
+  // لا نُبقي تحديدًا على لاعبين غير ظاهرين حاليًا (حتى لا يُحذف شيء مخفي بالخطأ)
+  const vis = new Set(visibleIds);
+  state.selected = new Set([...state.selected].filter(id => vis.has(id)));
 
   const body = $('#playersBody');
   const empty = $('#playersEmpty');
@@ -716,26 +775,282 @@ function renderPlayers(){
     body.innerHTML = '';
     empty.textContent = state.players.length ? 'لا توجد نتائج مطابقة للبحث.' : 'لا يوجد لاعبون مسجلون بعد.';
     empty.classList.remove('hidden');
+    updateBulkUI([]);
     return;
   }
   empty.classList.add('hidden');
   body.innerHTML = list.map(({ p, t }) => `
     <tr class="row" data-id="${esc(p.id)}">
+      <td class="chk" data-label="تحديد"><input type="checkbox" class="rowchk" data-sel="${esc(p.id)}" ${state.selected.has(p.id) ? 'checked' : ''} aria-label="تحديد ${esc(p.name || '')}"></td>
       <td data-label="اللاعب"><b>${esc(p.name || '—')}</b></td>
       <td data-label="التاج"><span class="tag">#${esc(p.tag || '—')}</span></td>
       <td data-label="المجموعة"><span class="badge">${esc(p.group || '—')}</span></td>
       <td data-label="الألعاب">${t.games}</td>
       <td data-label="نسبة الصحة">${accText(t.acc)}</td>
       <td data-label="أعلى سكور"><b style="color:var(--accent)">${t.best}</b></td>
+      <td class="act" data-label=""><button class="btn danger" type="button" data-delp="${esc(p.id)}">🗑️ حذف</button></td>
     </tr>`).join('');
+  updateBulkUI(visibleIds);
 }
 
 $('#playerSearch').addEventListener('input', renderPlayers);
 $('#playerSort').addEventListener('change', renderPlayers);
+
 $('#playersBody').addEventListener('click', e => {
+  const del = e.target.closest('[data-delp]');
+  if (del){ deletePlayers([del.dataset.delp]); return; }
+
+  if (e.target.closest('td.chk')){          // خانة التحديد لا تفتح نافذة التعديل
+    const box = e.target.closest('input.rowchk');
+    if (box){
+      if (box.checked) state.selected.add(box.dataset.sel); else state.selected.delete(box.dataset.sel);
+      updateBulkUI(getVisiblePlayers().map(x => x.p.id));
+    }
+    return;
+  }
   const tr = e.target.closest('tr[data-id]');
   if (tr) openEdit(tr.dataset.id);
 });
+
+$('#selAll').addEventListener('change', e => {
+  const ids = getVisiblePlayers().map(x => x.p.id);
+  ids.forEach(id => e.target.checked ? state.selected.add(id) : state.selected.delete(id));
+  renderPlayers();
+});
+
+// تحديد الحسابات التي لم تلعب أي مباراة (غالبًا الحسابات المزعجة/المكررة)
+$('#selInactiveBtn').addEventListener('click', () => {
+  state.selected = new Set(getVisiblePlayers().filter(x => x.t.games === 0).map(x => x.p.id));
+  renderPlayers();
+  const n = state.selected.size;
+  toast(n ? `تم تحديد ${n} حساب لم يلعب أي مباراة` : 'لا توجد حسابات بدون ألعاب في القائمة الحالية');
+});
+
+$('#bulkDelBtn').addEventListener('click', () => deletePlayers([...state.selected]));
+
+// حذف حساب أو عدة حسابات نهائيًا من Firebase
+async function deletePlayers(ids){
+  const list = ids.map(id => state.players.find(p => p.id === id)).filter(Boolean);
+  if (!list.length) return;
+
+  const names = list.slice(0, 5).map(p => `${p.name || '—'}#${p.tag || ''}`).join('، ')
+              + (list.length > 5 ? ` و${list.length - 5} آخرين` : '');
+  const ok = await confirmDialog({
+    title: list.length === 1 ? 'حذف الحساب' : `حذف ${list.length} حسابات`,
+    message: `سيتم حذف ${list.length === 1 ? 'الحساب' : 'الحسابات'} نهائيًا من قاعدة البيانات: ${names}. لا يمكن التراجع عن الحذف. اللوجات القديمة ستبقى كما هي في السجل. هل أنت متأكد؟`,
+    okText: list.length === 1 ? 'نعم، احذف الحساب' : `نعم، احذف (${list.length})`
+  });
+  if (!ok) return;
+
+  const patch = {};
+  list.forEach(p => { patch[p.id] = null; });          // null في update = حذف (دفعة واحدة وذرّيًا)
+  try{
+    await update(ref(db, 'players'), patch);
+    state.players = state.players.filter(p => !(p.id in patch));
+    list.forEach(p => state.selected.delete(p.id));
+    if (state.editingId && (state.editingId in patch)){
+      state.editingId = null;
+      closeModal($('#editModal'));
+    }
+    renderPlayers(); renderStats();
+    toast(list.length === 1 ? 'تم حذف الحساب 🗑️' : `تم حذف ${list.length} حسابات 🗑️`);
+  }catch(e){
+    console.error(e);
+    toast(explainError(e), true);
+  }
+}
+
+$('#deletePlayerBtn').addEventListener('click', () => { if (state.editingId) deletePlayers([state.editingId]); });
+
+/* ============================================================
+   إنشاء حساب من الأدمن + إعادة ترتيب التاجات من الصفر
+============================================================ */
+const TAG_MIN = 1000, TAG_MAX = 9999;
+
+function nextGroup(g){
+  const chars = g.split('');
+  let i = chars.length - 1;
+  while (i >= 0){
+    if (chars[i] !== 'z'){ chars[i] = String.fromCharCode(chars[i].charCodeAt(0) + 1); return chars.join(''); }
+    chars[i] = 'a'; i--;
+  }
+  return 'a' + chars.join('');
+}
+function groupIndex(g){ let n = 0; for (const ch of g) n = n * 26 + (ch.charCodeAt(0) - 96); return n; }
+// التاج القياسي فقط: حروف + 4 أرقام بين 1000 و9999 (مثل a1005). غير ذلك يُعتبر تاجًا مخصصًا ولا يُلمس.
+function parseTag(tag){
+  const m = String(tag || '').toLowerCase().match(/^([a-z]+)(\d{4})$/);
+  if (!m) return null;
+  const n = parseInt(m[2], 10);
+  return (n >= TAG_MIN && n <= TAG_MAX) ? { g: m[1], n } : null;
+}
+
+// تحديث قائمة اللاعبين من Firebase (بيانات حديثة قبل أي عملية حساسة)
+async function fetchPlayers(){
+  const snap = await get(child(dbRef, 'players'));
+  const pv = snap.val() || {};
+  state.players = Object.entries(pv).filter(([, v]) => v && typeof v === 'object').map(([id, v]) => ({ id, ...v }));
+}
+
+// خطة الترقيم: نفس ترتيب التاجات الحالي، لكن بتسلسل متصل يبدأ من a1000
+function buildRenumberPlan(players){
+  const seq = [], fixed = [];
+  players.forEach(p => { const t = parseTag(p.tag); (t ? seq : fixed).push({ p, t }); });
+  seq.sort((x, y) =>
+    groupIndex(x.t.g) - groupIndex(y.t.g) || x.t.n - y.t.n ||
+    (x.p.createdAt || 0) - (y.p.createdAt || 0) ||
+    String(x.p.name || '').localeCompare(String(y.p.name || ''), 'ar'));
+
+  // التاجات المخصصة (مثل x77) لا تُلمس، ونتجنب أي رقم تحجزه
+  const reserved = new Set(fixed.map(x => String(x.p.tag || '').toLowerCase()));
+  let g = 'a', n = TAG_MIN;
+  const take = () => {
+    for (;;){
+      const tag = g + n, cur = { g, n };
+      n++; if (n > TAG_MAX){ g = nextGroup(g); n = TAG_MIN; }
+      if (!reserved.has(tag)) return { tag, g: cur.g, n: cur.n };
+    }
+  };
+
+  const changes = [];
+  let last = { g: 'a', n: TAG_MIN - 1 };
+  seq.forEach(({ p }) => {
+    const a = take();
+    last = { g: a.g, n: a.n };
+    if (a.tag !== String(p.tag).toLowerCase() || (p.group || '') !== a.g){
+      changes.push({ p, oldTag: p.tag, newTag: a.tag, newGroup: a.g });
+    }
+  });
+  return { changes, last };
+}
+
+$('#renumberBtn').addEventListener('click', async () => {
+  const btn = $('#renumberBtn');
+  btn.disabled = true;
+  try{
+    await fetchPlayers();                       // نعمل على أحدث بيانات
+    const plan = buildRenumberPlan(state.players);
+
+    const cSnap = await get(child(dbRef, 'meta/tagCounter'));
+    const cur = cSnap.val();
+    const curG = cur && typeof cur.g === 'string' ? cur.g : 'a';
+    const curN = cur && Number.isInteger(cur.n) ? cur.n : TAG_MIN - 1;
+    const counterChanged = curG !== plan.last.g || curN !== plan.last.n;
+
+    if (!plan.changes.length && !counterChanged){
+      renderPlayers(); renderStats();
+      toast('التاجات مرتبة بالفعل ولا توجد فراغات ✅');
+      return;
+    }
+
+    const nx = plan.last.n + 1 > TAG_MAX ? nextGroup(plan.last.g) + TAG_MIN : plan.last.g + (plan.last.n + 1);
+    let msg;
+    if (plan.changes.length){
+      const ex = plan.changes.slice(0, 8).map(c => `• ${c.p.name || '—'}: من ${c.oldTag} إلى ${c.newTag}`).join('\n');
+      msg = `سيتم ترتيب تاجات اللاعبين بتسلسل متصل يبدأ من a${TAG_MIN} بدون فراغات (سيتغير تاج ${plan.changes.length} لاعب).\n\n${ex}` +
+            (plan.changes.length > 8 ? `\nو${plan.changes.length - 8} آخرين...` : '') +
+            `\n\nبعدها يأخذ أي لاعب جديد التاج ${nx}.\n\nتنبيه: من سجّل خروجًا مؤقتًا سيحتاج التاج الجديد لاسترجاع حسابه، واللوجات القديمة تبقى بالتاجات القديمة. هل تريد المتابعة؟`;
+    } else {
+      msg = `التاجات الحالية متسلسلة بدون فراغات، لكن العدّاد متقدم بسبب حسابات محذوفة. سيتم إرجاعه ليأخذ اللاعب الجديد التاج ${nx}. لن يتغير أي تاج موجود. هل تريد المتابعة؟`;
+    }
+    const ok = await confirmDialog({ title: 'إعادة ترتيب التاجات', message: msg, okText: 'نعم، أعد الترتيب' });
+    if (!ok){ renderPlayers(); return; }
+
+    // كتابة ذرّية واحدة: التاجات + المجموعات + عدّاد التاجات
+    const updates = {};
+    plan.changes.forEach(c => {
+      updates[`players/${c.p.id}/tag`] = c.newTag;
+      updates[`players/${c.p.id}/group`] = c.newGroup;
+    });
+    updates['meta/tagCounter'] = { g: plan.last.g, n: plan.last.n };
+    await update(dbRef, updates);
+
+    plan.changes.forEach(c => { c.p.tag = c.newTag; c.p.group = c.newGroup; });
+    renderPlayers(); renderStats();
+    toast(plan.changes.length ? `تمت إعادة ترتيب التاجات (${plan.changes.length} تغيير) ✅` : 'تم ضبط عدّاد التاجات ✅');
+  }catch(e){
+    console.error(e);
+    toast(explainError(e), true);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+// إنشاء حساب يدويًا
+async function adminCreateAccount(rawName, rawTag){
+  const name = String(rawName || '').replace(/[#<>\u0000-\u001F]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20);
+  if (!name) throw new Error('اكتب اسم اللاعب');
+
+  await fetchPlayers();                          // للتحقق من عدم تكرار التاج
+  const taken = new Set(state.players.map(p => String(p.tag || '').toLowerCase()));
+  let tag = '', group = '';
+  const custom = String(rawTag || '').trim().replace(/^#+/, '').toLowerCase();
+
+  if (custom){
+    if (!/^[a-z0-9_-]{1,16}$/.test(custom)) throw new Error('صيغة التاج غير صحيحة (حروف إنجليزية وأرقام فقط، مثل a1001)');
+    if (taken.has(custom)) throw new Error('هذا التاج مستخدم من حساب آخر');
+    tag = custom;
+    const m = custom.match(/^[a-z]+/);
+    group = m ? m[0].slice(0, 5) : '';
+  } else {
+    for (let i = 0; i < 25 && !tag; i++){
+      const res = await runTransaction(ref(db, 'meta/tagCounter'), c => {
+        let g = (c && typeof c.g === 'string' && c.g) ? c.g : 'a';
+        let n = (c && Number.isInteger(c.n)) ? c.n : TAG_MIN - 1;
+        n += 1;
+        if (n > TAG_MAX){ g = nextGroup(g); n = TAG_MIN; }
+        return { g, n };
+      });
+      if (!res.committed) throw new Error('تعذّر حجز التاج');
+      const v = res.snapshot.val();
+      if (!taken.has(v.g + v.n)){ tag = v.g + v.n; group = v.g; }
+    }
+    if (!tag) throw new Error('تعذّر إيجاد تاج متاح، حاول مرة أخرى');
+  }
+
+  const zero = () => ({ games: 0, correct: 0, wrong: 0, best: 0 });
+  const newRef = push(ref(db, 'players'));
+  const data = {
+    name, tag, group, createdAt: Date.now(), createdBy: 'admin',
+    totalGames: 0, totalCorrect: 0, totalWrong: 0, bestScore: 0,
+    stats: { r10: zero(), r15: zero(), r20: zero() }
+  };
+  await set(newRef, data);
+  const player = { id: newRef.key, ...data };
+  state.players.push(player);
+  return player;
+}
+
+$('#createPlayerBtn').addEventListener('click', () => {
+  $('#cName').value = ''; $('#cTag').value = '';
+  $('#cErr').textContent = '';
+  $('#cResult').classList.add('hidden');
+  openModal($('#createModal'));
+  setTimeout(() => $('#cName').focus(), 60);
+});
+
+async function submitCreate(){
+  const btn = $('#cCreateBtn'), err = $('#cErr'), res = $('#cResult');
+  err.textContent = ''; res.classList.add('hidden');
+  btn.disabled = true;
+  try{
+    const p = await adminCreateAccount($('#cName').value, $('#cTag').value);
+    renderPlayers(); renderStats();
+    res.innerHTML = `تم إنشاء الحساب ✅ <b>${esc(p.name)}</b><span class="tag">#${esc(p.tag)}</span><br>
+      <span class="muted">أعطِ اللاعب هذا التاج، ويدخل من «لدي حساب» باسمه والتاج.</span>`;
+    res.classList.remove('hidden');
+    $('#cName').value = ''; $('#cTag').value = '';
+    $('#cName').focus();
+  }catch(e){
+    console.error(e);
+    err.textContent = e && e.code ? explainError(e) : (e && e.message) || 'حدث خطأ غير متوقع';
+  }finally{
+    btn.disabled = false;
+  }
+}
+$('#cCreateBtn').addEventListener('click', submitCreate);
+$('#cName').addEventListener('keydown', e => { if (e.key === 'Enter') submitCreate(); });
+$('#cTag').addEventListener('keydown', e => { if (e.key === 'Enter') submitCreate(); });
 
 /* ============================================================
    تعديل اللاعب

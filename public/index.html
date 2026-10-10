@@ -1189,6 +1189,9 @@ function setSaveStatus(msg, isErr){
 // تحديث إحصائيات بروفايل اللاعب (ذريًا) تحت players/{playerId}
 async function updateMyStats(me, roomSize){
   const acc = state.account;
+  // إذا حذف الأدمن الحساب أثناء اللعب فلا نعيد إنشاءه بالخطأ
+  const exists = await get(ref(db, 'players/' + acc.id));
+  if (!exists.exists()) throw new Error('account-deleted');
   await runTransaction(ref(db, 'players/' + acc.id), cur => {
     const p = cur || { name: acc.name, tag: acc.tag, group: acc.group || '', createdAt: Date.now() };
     p.totalGames = (+p.totalGames || 0) + 1;
@@ -1225,18 +1228,23 @@ async function persistResults(matchLog, loggerId){
 
   setSaveStatus('جاري حفظ نتائجك...', false);
   const errors = [];
+  let accountDeleted = false;
 
   const me = (matchLog.players || []).find(p => p.id === state.account.id);
   if (me){
     try{ await updateMyStats(me, matchLog.roomSize); }
-    catch(e){ console.error(e); errors.push('إحصائياتك'); }
+    catch(e){
+      if (e && e.message === 'account-deleted') accountDeleted = true;
+      else { console.error(e); errors.push('إحصائياتك'); }
+    }
   }
   if (loggerId && loggerId === socket.id){
     try{ await writeEncryptedLog(matchLog); }
     catch(e){ console.error(e); errors.push('سجل المباراة'); }
   }
 
-  if (errors.length) setSaveStatus('تعذّر حفظ: ' + errors.join(' و ') + ' — تحقق من الاتصال.', true);
+  if (accountDeleted) setSaveStatus('تم حذف حسابك من قبل الأدمن. أعد فتح الصفحة لإنشاء حساب جديد.', true);
+  else if (errors.length) setSaveStatus('تعذّر حفظ: ' + errors.join(' و ') + ' — تحقق من الاتصال.', true);
   else setSaveStatus(me ? 'تم حفظ نتائجك وتحديث إحصائياتك ☁️' : '', false);
 }
 
